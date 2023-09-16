@@ -1,7 +1,7 @@
 import azure.cognitiveservices.speech as speechsdk
 
 # Initialize the speech configuration
-speech_key = "a8a1dcfbc0734c7094090da3535dc740"
+speech_key = KEY
 service_region = "eastus"
 speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
 
