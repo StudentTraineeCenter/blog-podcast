@@ -1,7 +1,16 @@
 import azure.cognitiveservices.speech as speechsdk
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 
+key_vault_url = "https://tts-podcast.vault.azure.net/"
+credential = DefaultAzureCredential()
+client = SecretClient(vault_url=key_vault_url, credential=credential)
+
+# Retrieve a secret
+secret_name = "your-secret-name"
+retrieved_secret = client.get_secret(secret_name)
 # Initialize the speech configuration
-speech_key = KEY
+speech_key = retrieved_secret.value
 service_region = "eastus"
 speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
 
