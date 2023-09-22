@@ -5,8 +5,8 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    border: 1px solid #ccc;
+    border: 1px solid #000000;
     padding: 15px;
-    background-color: #fff;
+    background-color: #6f46d9;
     z-index: 9999;
   }
