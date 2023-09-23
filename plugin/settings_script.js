@@ -17,16 +17,20 @@ document.addEventListener("DOMContentLoaded", function() {
     } else {
         console.error("Buttons or popup not found");
     }
-    document.addEventListener("submit", function(event) {
-        if (event.target && event.target.id === 'settingsForm') {
-            event.preventDefault(); // prevent page reload
-            var form = document.getElementById("settingsForm");
-            
-            if(form) {
-                console.log("form is not none")
-                var formData = new FormData(form);
+    var manualSubmitButton = document.getElementById("manualSubmit");
+    if (manualSubmitButton) {
+        manualSubmitButton.addEventListener("click", function() {
+            var settingsContainer = document.getElementById("settingsContainer");
+            var inputs = settingsContainer.querySelectorAll("input[type='text']");
+            var formData = new FormData();
+            var postId = document.querySelector("#post_ID").value;  // Get post ID from hidden field
+            inputs.forEach(function(input) {
+                formData.append(input.name, input.value);
+            });
+            if (formData) {
                 formData.append('action', 'my_ajax_action');  // Append action
-
+                formData.append('post_id', postId);  // Append post ID
+                console.log("Recieved parameters")
                 fetch(ajaxurl, {
                     method: 'POST',
                     body: formData,
@@ -41,8 +45,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     console.error("Error:", error);
                 });
             } else {
-                console.error("Form not found");
+                console.error("Settings conatiner not found");
             }
-        }
-    });
+        });
+    }
 });
