@@ -28,7 +28,7 @@ add_action('add_meta_boxes', 'add_my_custom_meta_box');
 function my_settings_popup_callback() {
     ?>
     <div class="wrap">
-        <h2>My Settings Popup</h2>
+        <h2>Make voice file</h2>
         <button id="showSettingsPopup">Show Settings</button>
         <div id="settingsPopup" class="hidden">
             <h3>Settings</h3>
@@ -37,10 +37,10 @@ function my_settings_popup_callback() {
             <div id="settingsContainer">
                 <label for="language">Language:</label>
                 <input type="text" id="language" name="language">
-                <label for="setting2">Setting 2:</label>
-                <input type="text" id="setting2" name="setting2">
+                <label for="speed">Speed:</label>
+                <input type="range" id="speed" name="speed" min="50" max="200" value="100">
                 <!-- Submit button -->
-                <input type="button" value="Save Settings" id="manualSubmit">
+                <input type="button" value="Save audio file" id="manualSubmit">
             </div>
         </div>
     </div>
@@ -48,16 +48,76 @@ function my_settings_popup_callback() {
 }
 
 
+function convert_htmltotext($htmlContent) {
+    // Create a new DOMDocument object
+    $dom = new DOMDocument;
+    
+    // Load the HTML content into the DOMDocument object
+    @$dom->loadHTML($htmlContent, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+    
+    // Find all image tags
+    $images = $dom->getElementsByTagName('img');
+    
+    // Loop through each image tag
+    foreach ($images as $image) {
+        // Get the 'alt' attribute for the image
+        $altText = $image->getAttribute('alt');
+        
+        // Create a text node with the 'alt' text
+        $textNode = $dom->createTextNode("Tady můžeme vidět: $altText");
+        
+        // Replace the image with the text node
+        $image->parentNode->replaceChild($textNode, $image);
+    }
+    
+    // Remove all other HTML tags
+    $textContent = strip_tags($dom->saveHTML());
+
+    $textContent = str_replace('&nbsp;', ' ', $textContent);
+    
+    $textContent = trim($textContent); //Trim
+
+    return $textContent;
+}
 
 
 
 function handle_ajax_request() {
     $language = sanitize_text_field($_POST['language']);
-    $setting2 = sanitize_text_field($_POST['setting2']);
-    error_log("My function is being run.");
+    $speed = sanitize_text_field($_POST['speed']);
+    $post_id = $_POST['post_id'];
+    //Parse the language
+    if ($language == 'cz') {
+        $language = "cs-CZ";
+    }
+    if ($language =='eng') {
+        $language = "en-US";
+    }
+    //Parse the speed
+    $rate = floatval($speed) -100;
+    if ($rate>0) {
+        $rate = "+" . $rate;
+    } else {
+        $rate ="$rate";
+    }
+    // Get the html from the post and convert it to readable text  
+    $post = get_post($post_id);
+    $article_html = $post->post_content;
+    $text = convert_htmltotext($article_html);
+    // SSML
+    $ssml = <<<EOD
+    <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="$language">
+        <voice name="cs-CZ-AntoninNeural">
+            <prosody rate="$rate%">
+                $text
+            </prosody>
+        </voice>
+    </speak>
+    EOD;
+    error_log("ssml:$ssml");
     // Process data here
     // Your Azure subscription key
-    $subscriptionKey = 'Nuh,uh';
+    $subscriptionKey = 'a8a1dcfbc0734c7094090da3535dc740';
 
     // Your Azure endpoint
     $endpoint1 = 'https://eastus.api.cognitive.microsoft.com/sts/v1.0/issuetoken';
@@ -66,14 +126,7 @@ function handle_ajax_request() {
     // Set up cURL
     $ch = curl_init($endpoint1);
 
-    // SSML
-    $ssml = <<<'EOD'
-    <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="cs-CZ">
-    <voice name="cs-CZ-AntoninNeural">
-    Já sem vlasta a doufam že sem nikoho neurazil.
-    </voice>
-    </speak>
-    EOD;
+    
     // Set up the headers
     $headers1 = [
         'Ocp-Apim-Subscription-Key: ' . $subscriptionKey,
@@ -91,8 +144,6 @@ function handle_ajax_request() {
         wp_send_json_error(['message' => 'Failed to make API request: ' . curl_error($ch)]);
 
     } else {
-        error_log(gettype($result));
-        error_log($result);
         $token = $result;
         error_log("Token recieved");
     }
@@ -120,8 +171,6 @@ function handle_ajax_request() {
         // Get WordPress upload directory info
         $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         error_log($httpcode);
-        error_log(gettype($result));
-        error_log($result);
 
         $upload_dir = wp_upload_dir();
         // Create a unique file name

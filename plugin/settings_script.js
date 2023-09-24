@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (manualSubmitButton) {
         manualSubmitButton.addEventListener("click", function() {
             var settingsContainer = document.getElementById("settingsContainer");
-            var inputs = settingsContainer.querySelectorAll("input[type='text']");
+            var inputs = settingsContainer.querySelectorAll("input[type='text'], input[type='range']");
             var formData = new FormData();
             var postId = document.querySelector("#post_ID").value;  // Get post ID from hidden field
             inputs.forEach(function(input) {
