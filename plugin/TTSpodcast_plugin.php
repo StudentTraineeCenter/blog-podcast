@@ -186,7 +186,7 @@ function handle_ajax_request() {
     error_log("ssml:$ssml");
     // Process data here
     // Your Azure subscription key
-    $subscriptionKey = 'a8a1dcfbc0734c7094090da3535dc740';
+    $subscriptionKey = 'nuh,uh';
 
     // Your Azure endpoint
     $endpoint1 = 'https://eastus.api.cognitive.microsoft.com/sts/v1.0/issuetoken';
