@@ -3,11 +3,10 @@
  * Plugin Name: TTSarticles 
  * Plugin URI: https://yourwebsite.com
  * Description: This plugin creates a button for all admins on a wordpress webste that allows them to make a podcast out of their article.
- * Version: 1.6
+ * Version: 2.0
  * Author: FilBlack
  * Author URI: https://yourwebsite.com
  */
-
 
 function enqueue_my_plugin_scripts() {
     // Enqueue CSS
@@ -53,8 +52,6 @@ function my_settings_popup_callback() {
                 </div>
                 <label for="speed">Speed:</label>
                 <input type="range" id="speed" name="speed" min="50" max="200" value="100">
-                <label for="break_time">Break time:</label>
-                <input type="range" id="break_time" name="break_time" min="0" max ="2000" value="0">
                 <!-- Submit button -->
                 <input type="button" value="Save audio file" id="manualSubmit">
             </div>
@@ -82,7 +79,7 @@ function replace_tag($htmlContent, $tagToFind, $tagToReplaceWith) {
 }
 
 
-function convert_htmltotext($htmlContent,$break_time) {
+function convert_htmltotext($htmlContent) {
     // Create a new DOMDocument object
     $dom = new DOMDocument;
     // Replace all titles, lists and others with <p>
@@ -94,6 +91,40 @@ function convert_htmltotext($htmlContent,$break_time) {
     // Load the HTML content into the DOMDocument object
     @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $htmlContent, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
     
+    // Replace the special funciton elements with their SSML
+    $special_elements = $dom->getElementsByTagName('span');
+    $nodesToReplace = [];
+    
+    foreach ($special_elements as $element) {
+        if ($element->hasAttribute('data-time') || $element->hasAttribute('data-level')) {
+            $nodesToReplace[] = $element;
+        }
+    }
+    foreach ($nodesToReplace as $element) {
+        // Replace the <span break> element with the proper ssml break
+        if ($element->hasAttribute('data-time')) {
+            $time = $element->getAttribute('data-time');
+            $break = $dom->createElement('break');
+            $break ->setAttribute('time',$time);
+            $element->parentNode->replaceChild($break,$element);
+        }
+        // Replace the nextSibling of the emphasis span element with the full ssml sentence
+        // Just delete the <span emphasis> elements at the end of the code
+        if ($element->hasAttribute('data-level')) {
+            $level = $element->getAttribute('data-level');
+            $emphasis = $dom->createElement('emphasis');
+            $emphasis->setAttribute('level', $level);
+            $emphasis->nodeValue = $element->nextSibling->nodeValue;
+            $element->parentNode->replaceChild($emphasis, $element->nextSibling);
+            $element->parentNode->removeChild($element);
+        }   
+        if ($element->hasAttribute('data-quote')) {
+            $element->parentNode->removeChild($element);
+        }
+        
+    }
+
+
     // Find all image tags
     $images = $dom->getElementsByTagName('img');
     
@@ -112,24 +143,12 @@ function convert_htmltotext($htmlContent,$break_time) {
     // Remove all other HTML tags
     $modifiedHtml = $dom->saveHTML();
 
-    $textContent = strip_tags($modifiedHtml,'<p>');
+    $textContent = strip_tags($modifiedHtml,'<p><break><emphasis>');
     //Decode wierd characters
     $textContent = html_entity_decode($textContent, ENT_QUOTES, 'UTF-8'); 
 
     $textContent = trim($textContent); //Trim
-    // Ading a break after each paragraph
-    // USING BREAK TIME IS NOT ADVISED
-    $text = "";
-    $break_lines = explode("</p>",$textContent);
-    $last_line = end($break_lines);  // Save the last element
-    array_pop($break_lines);
-    if ($break_time) {
-        foreach ($break_lines as $line) {
-        $text .= $line . "</p><break time='{$break_time}ms'/>";
-        }
-    }
-    $text .= $last_line;
-    return $text;
+    return $textContent;
 }
 
 
@@ -138,11 +157,10 @@ function handle_ajax_request() {
     $language = $_POST['language'];
     $speed = $_POST['speed'];
     $post_id = $_POST['post_id'];
-    $break_time = $_POST['break_time'];
     $gender = $_POST['gender'];
     //Select the voice based on language and gender
-    $cz_voice = ($gender = 'male' ? "cs-CZ-AntoninNeural" : "cs-CZ-VlastaNeural");
-    $eng_voice = ($gender = 'male' ? "en-US-GuyNeural" : "en-US-JennyNeural");
+    $cz_voice = ($gender == 'male' ? "cs-CZ-AntoninNeural" : "cs-CZ-VlastaNeural");
+    $eng_voice = ($gender == 'male' ? "en-US-GuyNeural" : "en-US-JennyNeural");
     $voice = ($language == 'cs-CZ' ? $cz_voice : $eng_voice);
     //Parse the speed
     $rate = floatval($speed) -100;
@@ -154,7 +172,7 @@ function handle_ajax_request() {
     // Get the html from the post and convert it to readable text  
     $post = get_post($post_id);
     $article_html = $post->post_content;
-    $text = convert_htmltotext($article_html,$break_time);
+    $text = convert_htmltotext($article_html);
     // SSML
     $ssml = <<<EOD
     <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="$language">
@@ -168,7 +186,7 @@ function handle_ajax_request() {
     error_log("ssml:$ssml");
     // Process data here
     // Your Azure subscription key
-    $subscriptionKey = 'nuh,uh';
+    $subscriptionKey = 'a8a1dcfbc0734c7094090da3535dc740';
 
     // Your Azure endpoint
     $endpoint1 = 'https://eastus.api.cognitive.microsoft.com/sts/v1.0/issuetoken';
@@ -260,16 +278,9 @@ function handle_ajax_request() {
         
         wp_send_json_success(['message' => 'Podcast appended.']);
     }
-    
 
     // Close cURL
     curl_close($ch);
 
 }
 add_action('wp_ajax_my_ajax_action', 'handle_ajax_request');
-
-
-////DUAL MODE TO ADD SPECIAL TAGS------------------------------------------------------------
-
-
-

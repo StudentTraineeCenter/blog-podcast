@@ -1,14 +1,14 @@
 // Dual mode for special tags
 const { addFilter } = wp.hooks;
 const { createHigherOrderComponent } = wp.compose;
-
 const addSpecialClass = createHigherOrderComponent((BlockEdit) => {
     return (props) => {
         // Check if the block has a 'content' attribute
         if (props.attributes && props.attributes.content) {
 
-            let newContent = props.attributes.content.replace(/(?!<span class="tts-tag">)\/break (\d+)ms(?!<\/span>)/g, '<span class="tts-tag">/break $1ms</span>');
-            newContent = newContent.replace(/(?!<span class="tts-tag">)\/emp ([^']+) '([^']+)'(?!<\/span>)/g, '<span class="tts-tag">/emp $1 \'</span>$2<span class="tts-tag">\'</span>');
+            let newContent = props.attributes.content.replace(/(?!<span class="tts-tag" data-time="\d+ms">)\/break (\d+)ms(?!<\/span>)/g, '<span class="tts-tag" data-time="$1ms">/break $1ms</span>');
+            newContent = newContent.replace(/(?!<span class="tts-tag" data-level="[^"]+">)\/emp ([^']+) '([^']+)'(?!<\/span>)/g, '<span class="tts-tag" data-level="$1">/emp $1 \'</span>$2<span class="tts-tag" data-quote="true">\'</span>');
+
             if (props.attributes.content != newContent) {
                 console.log(newContent);
             }
@@ -18,14 +18,10 @@ const addSpecialClass = createHigherOrderComponent((BlockEdit) => {
 
         return result;
       
-    
     };
   }, 'addSpecialClass');
   
 addFilter('editor.BlockEdit', 'tts/add-special-class', addSpecialClass);
-
-
-
 
 document.addEventListener("DOMContentLoaded", function() {
     var showButton = document.getElementById("showSettingsPopup");
