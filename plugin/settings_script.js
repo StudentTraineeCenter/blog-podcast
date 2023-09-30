@@ -8,7 +8,7 @@ const addSpecialClass = createHigherOrderComponent((BlockEdit) => {
 
             let newContent = props.attributes.content.replace(/(?!<span class="tts-tag" data-time="\d+ms">)\/break (\d+)ms(?!<\/span>)/g, '<span class="tts-tag" data-time="$1ms">/break $1ms</span>');
             newContent = newContent.replace(/(?!<span class="tts-tag" data-level="[^"]+">)\/emp ([^']+) '([^']+)'(?!<\/span>)/g, '<span class="tts-tag" data-level="$1">/emp $1 \'</span>$2<span class="tts-tag" data-quote="true">\'</span>');
-
+            newContent = newContent.replace(/(?!<span class="tts-tag" data-text="true">)\/txt ;([^;<\/]+);(?!<\/span>)/g, '<span class="tts-tag" data-text="true">/txt ;$1;</span>');
             if (props.attributes.content != newContent) {
                 console.log(newContent);
             }
@@ -60,9 +60,20 @@ document.addEventListener("DOMContentLoaded", function() {
     if (manualSubmitButton) {
         manualSubmitButton.addEventListener("click", function() {
             var settingsContainer = document.getElementById("settingsContainer");
-            var inputs = settingsContainer.querySelectorAll("input[type='text'], input[type='range'], input[type='radio']");
+            var language = settingsContainer.querySelector("input[name='language']:checked").value;
+            var gender = settingsContainer.querySelector("input[name='gender']:checked").value;
+            var speed = settingsContainer.querySelector("input[name='speed']").value;
+            var alttext = settingsContainer.querySelector("input[name='alttext']").checked ? "true" : "false";
+            var volume =  settingsContainer.querySelector("select[name='volume']").value;
             var formData = new FormData();
             var postId = document.querySelector("#post_ID").value;  // Get post ID from hidden field
+            var inputs = [
+                {name: 'language', value: language},
+                {name: 'gender', value: gender},
+                {name: 'speed', value: speed},
+                {name: 'alttext', value: alttext},
+                {name: 'volume', value: volume}
+            ];
             inputs.forEach(function(input) {
                 formData.append(input.name, input.value);
             });

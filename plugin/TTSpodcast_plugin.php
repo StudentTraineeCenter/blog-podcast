@@ -8,6 +8,10 @@
  * Author URI: https://yourwebsite.com
  */
 
+//Setup the azure key
+require "setenv.php";
+
+
 function enqueue_my_plugin_scripts() {
     // Enqueue CSS
     wp_enqueue_style('my-plugin-style', plugin_dir_url(__FILE__) . 'settings_style.css');
@@ -35,7 +39,7 @@ function my_settings_popup_callback() {
             <button id="closeSettingsPopup">Close</button>
             <!-- Your settings here -->
             <div id="settingsContainer">
-                <label for="language">Language:</label>
+                <label>Voice:</label>
                 <div id="language">
                     <input type="radio" id="english" name="language" value="en-US">
                     <label for="english">English</label>
@@ -52,6 +56,17 @@ function my_settings_popup_callback() {
                 </div>
                 <label for="speed">Speed:</label>
                 <input type="range" id="speed" name="speed" min="50" max="200" value="100">
+                <label for="volume">Volume:</label>
+                <select id="volume" name="volume">
+                    <option value="default">Default</option>
+                    <option value="x-soft">X-Soft</option>
+                    <option value="soft">Soft</option>
+                    <option value="medium">Medium</option>
+                    <option value="loud">Loud</option>
+                    <option value="x-loud">X-Loud</option>
+                </select>
+                <label for="alttext">Include image alt</label>
+                <input type="checkbox" id="alttext" name="alttext" value="true">
                 <!-- Submit button -->
                 <input type="button" value="Save audio file" id="manualSubmit">
             </div>
@@ -79,9 +94,10 @@ function replace_tag($htmlContent, $tagToFind, $tagToReplaceWith) {
 }
 
 
-function convert_htmltotext($htmlContent) {
+function convert_htmltotext($htmlContent,$alttext) {
     // Create a new DOMDocument object
     $dom = new DOMDocument;
+
     // Replace all titles, lists and others with <p>
     $tags = array('h4','h3','h2','h1','li');
     foreach ($tags as $tag) {
@@ -91,55 +107,93 @@ function convert_htmltotext($htmlContent) {
     // Load the HTML content into the DOMDocument object
     @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $htmlContent, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
     
-    // Replace the special funciton elements with their SSML
-    $special_elements = $dom->getElementsByTagName('span');
-    $nodesToReplace = [];
-    
-    foreach ($special_elements as $element) {
-        if ($element->hasAttribute('data-time') || $element->hasAttribute('data-level')) {
-            $nodesToReplace[] = $element;
+    // Remove all empty elements
+    /*
+    $xpath = new DOMXPath($dom);
+
+    // Select all elements
+    $allElements = $xpath->query('//*');
+    $preserveTags = ['img', 'br', 'hr'];  // Add more tags here if needed
+    // Loop through NodeList backwards to avoid index shifting during removal
+    for ($i = $allElements->length - 1; $i >= 0; $i--) {
+        $element = $allElements->item($i);
+        // Skip special empty tags like <img>, <br>, etc.
+        if (in_array($element->tagName, $preserveTags)) {
+            continue;
+        }
+        // Check if element is truly empty by trimming text content
+        if (!trim($element->nodeValue) && !$element->hasChildNodes()) {
+            $element->parentNode->removeChild($element);
         }
     }
-    foreach ($nodesToReplace as $element) {
-        // Replace the <span break> element with the proper ssml break
+    */
+    
+    // Replace the special funciton elements with their SSML
+    $special_elements = $dom->getElementsByTagName('span');
+    $elementsToRemove = [];
+    $elementsToReplace = [];
+    foreach ($special_elements as $element) {
+        // Replace the break element with SSML
         if ($element->hasAttribute('data-time')) {
             $time = $element->getAttribute('data-time');
             $break = $dom->createElement('break');
-            $break ->setAttribute('time',$time);
-            $element->parentNode->replaceChild($break,$element);
+            $break->setAttribute('time',$time);
+            $elementsToReplace[] = ['newNode' => $break, 'oldNode' => $element];
         }
-        // Replace the nextSibling of the emphasis span element with the full ssml sentence
-        // Just delete the <span emphasis> elements at the end of the code
+        // Replace text to be read with ssml text 
+        if ($element->hasAttribute('data-text')) {
+            $contenttxt = $element->nodeValue;
+            $contenttxt = str_replace("/txt", "", $contenttxt);
+            $contenttxt = str_replace(";", "", $contenttxt);
+            error_log($contenttxt);
+            $txt = $dom->createTextNode($contenttxt);
+            $elementsToReplace[] = ['newNode' => $txt, 'oldNode' => $element];
+        }
+        // Replace the emphasis element with SSML
         if ($element->hasAttribute('data-level')) {
             $level = $element->getAttribute('data-level');
             $emphasis = $dom->createElement('emphasis');
             $emphasis->setAttribute('level', $level);
+            //replace <span>emp</span>'s sibling (the text to be emphasized) with the <emp> element
             $emphasis->nodeValue = $element->nextSibling->nodeValue;
-            $element->parentNode->replaceChild($emphasis, $element->nextSibling);
-            $element->parentNode->removeChild($element);
-        }   
+            $elementsToReplace[] = ['newNode' => $emphasis, 'oldNode' => $element->nextSibling];
+            $elementsToRemove[] = $element;
+        }
+        // Remove the ending quotes 
         if ($element->hasAttribute('data-quote')) {
-            $element->parentNode->removeChild($element);
+            $elementsToRemove[] = $element;
+        }
+    }
+    // Replace what needs to be replaced
+    foreach ($elementsToReplace as $item) {
+        $item['oldNode']->parentNode->replaceChild($item['newNode'], $item['oldNode']);
+    }
+    // Delete what needs to be deleted
+    foreach ($elementsToRemove as $element) {
+        $element->parentNode->removeChild($element);
+    }
+    
+    // If the user selects the checkbox, then use the images alttext, otherwise delete the images
+    if ($alttext === "true") {
+        $images = $dom->getElementsByTagName('img');
+        // Loop through each image tag
+        foreach ($images as $image) {
+            // Get the 'alt' attribute for the image
+            $altText = $image->getAttribute('alt');
+            $textNode = $dom->createElement('p');
+            $textNode->nodeValue= $altText;
+            $image->parentNode->replaceChild($textNode, $image);
+        }
+    } else {
+        $images = $dom->getElementsByTagName('img');
+        $length = $images->length;
+        for ($i = $length - 1; $i >= 0; $i--) {
+            $image = $images->item($i);
+            $image->parentNode->removeChild($image);
         }
         
     }
-
-
-    // Find all image tags
-    $images = $dom->getElementsByTagName('img');
-    
-    // Loop through each image tag
-    foreach ($images as $image) {
-        // Get the 'alt' attribute for the image
-        $altText = $image->getAttribute('alt');
-        
-        // Create a text node with the 'alt' text
-        $textNode = $dom->createTextNode("Tady můžeme vidět: $altText");
-        
-        // Replace the image with the text node
-        $image->parentNode->replaceChild($textNode, $image);
-    }
-
+ 
     // Remove all other HTML tags
     $modifiedHtml = $dom->saveHTML();
 
@@ -158,6 +212,8 @@ function handle_ajax_request() {
     $speed = $_POST['speed'];
     $post_id = $_POST['post_id'];
     $gender = $_POST['gender'];
+    $alttext = $_POST['alttext'];
+    $volume = $_POST['volume'];
     //Select the voice based on language and gender
     $cz_voice = ($gender == 'male' ? "cs-CZ-AntoninNeural" : "cs-CZ-VlastaNeural");
     $eng_voice = ($gender == 'male' ? "en-US-GuyNeural" : "en-US-JennyNeural");
@@ -172,12 +228,12 @@ function handle_ajax_request() {
     // Get the html from the post and convert it to readable text  
     $post = get_post($post_id);
     $article_html = $post->post_content;
-    $text = convert_htmltotext($article_html);
+    $text = convert_htmltotext($article_html,$alttext);
     // SSML
     $ssml = <<<EOD
     <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="$language">
         <voice name="$voice">
-            <prosody rate="$rate%">
+            <prosody rate="$rate%" volume="$volume">
                 $text
             </prosody>
         </voice>
@@ -186,7 +242,8 @@ function handle_ajax_request() {
     error_log("ssml:$ssml");
     // Process data here
     // Your Azure subscription key
-    $subscriptionKey = 'nuh,uh';
+
+    $subscriptionKey = getenv('AZURE_KEY');
 
     // Your Azure endpoint
     $endpoint1 = 'https://eastus.api.cognitive.microsoft.com/sts/v1.0/issuetoken';
@@ -281,6 +338,5 @@ function handle_ajax_request() {
 
     // Close cURL
     curl_close($ch);
-
 }
 add_action('wp_ajax_my_ajax_action', 'handle_ajax_request');
