@@ -1,19 +1,73 @@
 // Dual mode for special tags
 const { addFilter } = wp.hooks;
 const { createHigherOrderComponent } = wp.compose;
+// Remove the class when needed
+function checkAndRemoveClasses(props) {
+    let content = props.attributes.content;
+    let parser = new DOMParser();
+    let doc = parser.parseFromString(content, 'text/html');
+    // emp
+    const firstSpans = doc.querySelectorAll('[data-level]');
+    const secondSpans = doc.querySelectorAll('[data-quote="true"]');
+    // Break
+    const thirdSpans = doc.querySelectorAll('[data-time]')
+    // txt
+    const fourthSpans = doc.querySelectorAll('[data-text]')
+    
+    let changed = false;
+    // emp
+    firstSpans.forEach((span) => {
+        let isValid = /\/emp \w+ ;/.test(span.textContent);
+        if (!isValid) {
+            span.outerHTML = span.textContent;
+            changed = true;
+        }
+    });
+  
+    secondSpans.forEach((span) => {
+        let isValid = /'/.test(span.textContent);
+        if (!isValid) {
+            span.outerHTML = span.textContent;
+            changed = true;
+        }
+    });
+    // break
+    thirdSpans.forEach((span) => {
+        let isValid = /\/break \d+ms/.test(span.textContent);
+        if (!isValid) {
+            span.outerHTML = span.textContent;
+            changed = true;
+        }
+    });
+    // txt
+    fourthSpans.forEach((span) => {
+        let isValid = /\/txt ;([^;<\/]+);/.test(span.textContent);
+        if (!isValid) {
+            span.outerHTML = span.textContent;
+            changed = true;
+        }
+    });
+  
+    if (changed) {
+        props.setAttributes({ content: doc.body.innerHTML });
+    }
+}
 const addSpecialClass = createHigherOrderComponent((BlockEdit) => {
     return (props) => {
         // Check if the block has a 'content' attribute
         if (props.attributes && props.attributes.content) {
-
+            // Wrap break -one <span>
             let newContent = props.attributes.content.replace(/(?!<span class="tts-tag" data-time="\d+ms">)\/break (\d+)ms(?!<\/span>)/g, '<span class="tts-tag" data-time="$1ms">/break $1ms</span>');
+            // Wrap emp -two <span>
             newContent = newContent.replace(/(?!<span class="tts-tag" data-level="[^"]+">)\/emp ([^']+) '([^']+)'(?!<\/span>)/g, '<span class="tts-tag" data-level="$1">/emp $1 \'</span>$2<span class="tts-tag" data-quote="true">\'</span>');
+            // Wrap txt -one <span>
             newContent = newContent.replace(/(?!<span class="tts-tag" data-text="true">)\/txt ;([^;<\/]+);(?!<\/span>)/g, '<span class="tts-tag" data-text="true">/txt ;$1;</span>');
             if (props.attributes.content != newContent) {
                 console.log(newContent);
             }
             props.setAttributes({ content: newContent });
         }
+        checkAndRemoveClasses(props);
         const result = wp.element.createElement(BlockEdit,props);
 
         return result;

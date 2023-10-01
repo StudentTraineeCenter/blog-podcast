@@ -108,7 +108,6 @@ function convert_htmltotext($htmlContent,$alttext) {
     @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $htmlContent, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
     
     // Remove all empty elements
-    /*
     $xpath = new DOMXPath($dom);
 
     // Select all elements
@@ -126,7 +125,6 @@ function convert_htmltotext($htmlContent,$alttext) {
             $element->parentNode->removeChild($element);
         }
     }
-    */
     
     // Replace the special funciton elements with their SSML
     $special_elements = $dom->getElementsByTagName('span');
