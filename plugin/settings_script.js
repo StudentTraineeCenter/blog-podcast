@@ -17,7 +17,7 @@ function checkAndRemoveClasses(props) {
     let changed = false;
     // emp
     firstSpans.forEach((span) => {
-        let isValid = /\/emp \w+ ;/.test(span.textContent);
+        let isValid = /\/emp \w+ '/.test(span.textContent);
         if (!isValid) {
             span.outerHTML = span.textContent;
             changed = true;
