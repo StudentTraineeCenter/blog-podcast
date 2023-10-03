@@ -10,3 +10,15 @@
     background-color: #6f46d9;
     z-index: 9999;
   }
+  #text_to_speech {
+    background-color: #106ec1;
+    border: 1px solid #000000;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 20px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    /*font-family: Arial, sans-serif;*/
+    font-size: 14px;
+    line-height: 1.5;
+    color: #2978ff;
+  }
