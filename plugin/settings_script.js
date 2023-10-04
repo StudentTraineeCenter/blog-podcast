@@ -1,6 +1,17 @@
+// Hide all the special tags in preview mode
+
+console.log(typenow);
+if (typenow != "post") {
+    console.log("Triggered, typenow:".typenow)
+    const specialTags1 = document.querySelectorAll('.tts-tag');
+    specialTags1.forEach(function(tag) {
+        tag.style.display = 'none';
+    });
+} else { // Execute only when the you are editing a post
 // Dual mode for special tags
 const { addFilter } = wp.hooks;
 const { createHigherOrderComponent } = wp.compose;
+
 // Remove the class when needed
 function checkAndRemoveClasses(props) {
     let content = props.attributes.content;
@@ -8,12 +19,13 @@ function checkAndRemoveClasses(props) {
     let doc = parser.parseFromString(content, 'text/html');
     // emp
     const firstSpans = doc.querySelectorAll('[data-level]');
-    const secondSpans = doc.querySelectorAll('[data-quote="true"]');
-    // Break
+    const secondSpans = doc.querySelectorAll('[data-quote]');
+    // break
     const thirdSpans = doc.querySelectorAll('[data-time]')
     // txt
     const fourthSpans = doc.querySelectorAll('[data-text]')
-    
+    // audio
+    const fifthSpans = doc.querySelectorAll('[data-audio]')
     let changed = false;
     // emp
     firstSpans.forEach((span) => {
@@ -23,7 +35,7 @@ function checkAndRemoveClasses(props) {
             changed = true;
         }
     });
-  
+    // '
     secondSpans.forEach((span) => {
         let isValid = /'/.test(span.textContent);
         if (!isValid) {
@@ -41,7 +53,14 @@ function checkAndRemoveClasses(props) {
     });
     // txt
     fourthSpans.forEach((span) => {
-        let isValid = /\/txt ;([^;<\/]+);/.test(span.textContent);
+        let isValid = /\/txt ;([^;]+);/.test(span.textContent);
+        if (!isValid) {
+            span.outerHTML = span.textContent;
+            changed = true;
+        }
+    });
+    fifthSpans.forEach((span) => {
+        let isValid = /\/audio '([^']+)'/.test(span.textContent);
         if (!isValid) {
             span.outerHTML = span.textContent;
             changed = true;
@@ -52,30 +71,39 @@ function checkAndRemoveClasses(props) {
         props.setAttributes({ content: doc.body.innerHTML });
     }
 }
+let debouncedFunction = _.debounce(function(props) {
+    if (props.attributes && props.attributes.content) {
+        // Wrap break -one <span>
+        let newContent = props.attributes.content.replace(/(?!<span class="tts-tag" data-time="\d+ms">)\/break (\d+)ms(?!<\/span>)/g, '<span class="tts-tag" data-time="$1ms">/break $1ms</span>');
+        // Wrap emp -two <span>
+        newContent = newContent.replace(/(?!<span class="tts-tag" data-level="[^"]+">)\/emp ([^']+) '([^']+)'(?!<\/span>)/g, '<span class="tts-tag" data-level="$1">/emp $1 \'</span>$2<span class="tts-tag" data-quote="true">\'</span>');
+        // Wrap txt -one <span>
+        newContent = newContent.replace(/(?!<span class="tts-tag" data-text="true">)\/txt ;([^;]+);(?!<\/span>)/g, '<span class="tts-tag" data-text="true">/txt ;$1;</span>');
+        // Wrap audio -one <span>
+        newContent = newContent.replace(/(?!<span class="tts-tag" data-audio="true">)\/audio '([^']+)'(?!<\/span>)/g, '<span class="tts-tag" data-audio="true">/audio \'$1\'</span>');
+        if (props.attributes.content != newContent) {
+            console.log(newContent);
+        }
+        props.setAttributes({ content: newContent });
+    }
+    checkAndRemoveClasses(props)
+}, 300);
+// Execute only if in the admin area 
+
 const addSpecialClass = createHigherOrderComponent((BlockEdit) => {
     return (props) => {
         // Check if the block has a 'content' attribute
-        if (props.attributes && props.attributes.content) {
-            // Wrap break -one <span>
-            let newContent = props.attributes.content.replace(/(?!<span class="tts-tag" data-time="\d+ms">)\/break (\d+)ms(?!<\/span>)/g, '<span class="tts-tag" data-time="$1ms">/break $1ms</span>');
-            // Wrap emp -two <span>
-            newContent = newContent.replace(/(?!<span class="tts-tag" data-level="[^"]+">)\/emp ([^']+) '([^']+)'(?!<\/span>)/g, '<span class="tts-tag" data-level="$1">/emp $1 \'</span>$2<span class="tts-tag" data-quote="true">\'</span>');
-            // Wrap txt -one <span>
-            newContent = newContent.replace(/(?!<span class="tts-tag" data-text="true">)\/txt ;([^;<\/]+);(?!<\/span>)/g, '<span class="tts-tag" data-text="true">/txt ;$1;</span>');
-            if (props.attributes.content != newContent) {
-                console.log(newContent);
-            }
-            props.setAttributes({ content: newContent });
-        }
-        checkAndRemoveClasses(props);
+        debouncedFunction(props)
         const result = wp.element.createElement(BlockEdit,props);
 
         return result;
-      
+    
     };
-  }, 'addSpecialClass');
-  
+}, 'addSpecialClass');
+
 addFilter('editor.BlockEdit', 'tts/add-special-class', addSpecialClass);
+
+
 
 document.addEventListener("DOMContentLoaded", function() {
     var showButton = document.getElementById("showSettingsPopup");
@@ -101,11 +129,13 @@ document.addEventListener("DOMContentLoaded", function() {
         showButton.addEventListener("click", function(event) {
             event.preventDefault();
             popup.classList.remove("hidden");
+            showButton.classList.add("hidden");
         });
 
         closeButton.addEventListener("click", function(event) {
             event.preventDefault();
             popup.classList.add("hidden");
+            showButton.classList.remove("hidden");
         });
     } else {
         console.error("Buttons or popup not found");
@@ -113,6 +143,8 @@ document.addEventListener("DOMContentLoaded", function() {
     var manualSubmitButton = document.getElementById("manualSubmit");
     if (manualSubmitButton) {
         manualSubmitButton.addEventListener("click", function() {
+            document.getElementById("loading").style.display = "block"; // Show that its loading
+            console.log(document.getElementById("loading"));
             var settingsContainer = document.getElementById("settingsContainer");
             var language = settingsContainer.querySelector("input[name='language']:checked").value;
             var gender = settingsContainer.querySelector("input[name='gender']:checked").value;
@@ -140,17 +172,20 @@ document.addEventListener("DOMContentLoaded", function() {
                     body: formData,
                 })
                 .then(function(response) {
+                    document.getElementById("loading").style.display = "none"; // hide the loading element
                     return response.json();
                 })
                 .then(function(data) {
                     console.log(data);
                 })
                 .catch(function(error) {
+                    document.getElementById("loading").style.display = "none";
                     console.error("Error:", error);
                 });
             } else {
-                console.error("Settings conatiner not found");
+                console.error("Settings container not found");
             }
         });
     }
 });
+}

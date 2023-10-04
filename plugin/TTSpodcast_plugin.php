@@ -10,20 +10,25 @@
 
 //Setup the azure key
 require "setenv.php";
-
-
-function enqueue_my_plugin_scripts() {
-    // Enqueue CSS
+// Enqueue necessary files for admin
+function enqueue_admin_scripts() {
     wp_enqueue_style('my-plugin-style', plugin_dir_url(__FILE__) . 'settings_style.css');
-
-    // Enqueue JavaScript
     wp_enqueue_script('my-plugin-script', plugin_dir_url(__FILE__) . 'settings_script.js', array('jquery'), '1.0', true);
+    // Enqueue Iodash for debouncing
+    wp_enqueue_script('lodash');
 }
-add_action('admin_enqueue_scripts', 'enqueue_my_plugin_scripts');
+add_action('admin_enqueue_scripts', 'enqueue_admin_scripts');
+// Enque necessary files for preview
 
-// Add meta box
+function enque_preview_scripts() {
+    // Enqueue CSS to hide the class
+    wp_enqueue_style('my-plugin-style', plugin_dir_url(__FILE__) . 'settings_style.css');
+}
+add_action('wp_enqueue_scripts', 'enque_preview_scripts');
+
+// Add meta box, only if in the admin area
 function add_my_custom_meta_box() {
-    add_meta_box('my_custom_meta_box', 'Text to speech', 'my_settings_popup_callback', 'post');
+    add_meta_box('text_to_speech', 'Text to speech', 'my_settings_popup_callback', 'post','side', 'default');
 }
 add_action('add_meta_boxes', 'add_my_custom_meta_box');
 
@@ -31,24 +36,23 @@ add_action('add_meta_boxes', 'add_my_custom_meta_box');
 function my_settings_popup_callback() {
     ?>
     <div class="wrap">
-        <h2>Make voice file</h2>
         <button id="TagToggle">Toggle Tags</button>
         <button id="showSettingsPopup">Show Settings</button>
         <div id="settingsPopup" class="hidden">
-            <h3>Settings</h3>
+            <h3 id="Settings">Settings</h3>
             <button id="closeSettingsPopup">Close</button>
             <!-- Your settings here -->
             <div id="settingsContainer">
                 <label>Voice:</label>
                 <div id="language">
-                    <input type="radio" id="english" name="language" value="en-US">
+                    <input type="radio" id="english" name="language" value="en-US"checked>
                     <label for="english">English</label>
 
                     <input type="radio" id="czech" name="language" value="cs-CZ">
                     <label for="czech">Czech</label>
                 </div>
                 <div id="gender">
-                    <input type="radio" id="male" name="gender" value="male">
+                    <input type="radio" id="male" name="gender" value="male"checked>
                     <label for="male">Male</label>
 
                     <input type="radio" id="female" name="gender" value="female">
@@ -69,6 +73,7 @@ function my_settings_popup_callback() {
                 <input type="checkbox" id="alttext" name="alttext" value="true">
                 <!-- Submit button -->
                 <input type="button" value="Save audio file" id="manualSubmit">
+                <div id="loading" class="spinner" style="display:none;"></div>
             </div>
         </div>
     </div>
@@ -94,7 +99,7 @@ function replace_tag($htmlContent, $tagToFind, $tagToReplaceWith) {
 }
 
 
-function convert_htmltotext($htmlContent,$alttext) {
+function convert_htmltotext($htmlContent,$alttext,$rate,$volume) {
     // Create a new DOMDocument object
     $dom = new DOMDocument;
 
@@ -137,15 +142,33 @@ function convert_htmltotext($htmlContent,$alttext) {
             $break = $dom->createElement('break');
             $break->setAttribute('time',$time);
             $elementsToReplace[] = ['newNode' => $break, 'oldNode' => $element];
+            error_log("break");
+            error_log(print_r($element->parentNode, true));
+        }
+        // Replace audio with SSML
+        if ($element->hasAttribute('data-audio')) {
+            // Either href inside <a> or just url 
+            $aTags = $element->getElementsByTagName('a');
+            if ($aTags->length == 1) {
+                $url = $aTags->getAttribute('href');
+            } else {
+                $url = $element->nodeValue;
+                $url = preg_replace("/^(\w+\s)/","",$url);
+                $url = str_replace("'","",$url);
+            }
+            $audio = $dom->createTextNode("</p></prosody><audio src='$url'></audio><prosody rate='$rate%' volume='$volume'><p>");
+            $elementsToReplace[] = ['newNode' => $audio, 'oldNode' => $element];
+
         }
         // Replace text to be read with ssml text 
         if ($element->hasAttribute('data-text')) {
             $contenttxt = $element->nodeValue;
             $contenttxt = str_replace("/txt", "", $contenttxt);
             $contenttxt = str_replace(";", "", $contenttxt);
-            error_log($contenttxt);
             $txt = $dom->createTextNode($contenttxt);
             $elementsToReplace[] = ['newNode' => $txt, 'oldNode' => $element];
+            error_log("txt");
+            error_log(print_r($element->parentNode, true));
         }
         // Replace the emphasis element with SSML
         if ($element->hasAttribute('data-level')) {
@@ -156,6 +179,8 @@ function convert_htmltotext($htmlContent,$alttext) {
             $emphasis->nodeValue = $element->nextSibling->nodeValue;
             $elementsToReplace[] = ['newNode' => $emphasis, 'oldNode' => $element->nextSibling];
             $elementsToRemove[] = $element;
+            error_log("emp");
+            error_log(print_r($element->parentNode, true));
         }
         // Remove the ending quotes 
         if ($element->hasAttribute('data-quote')) {
@@ -226,7 +251,7 @@ function handle_ajax_request() {
     // Get the html from the post and convert it to readable text  
     $post = get_post($post_id);
     $article_html = $post->post_content;
-    $text = convert_htmltotext($article_html,$alttext);
+    $text = convert_htmltotext($article_html,$alttext,$rate,$volume);
     // SSML
     $ssml = <<<EOD
     <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="$language">
