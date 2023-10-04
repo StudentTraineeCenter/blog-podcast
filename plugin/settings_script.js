@@ -1,6 +1,17 @@
+// Hide all the special tags in preview mode
+
+console.log(typenow);
+if (typenow != "post") {
+    console.log("Triggered, typenow:".typenow)
+    const specialTags1 = document.querySelectorAll('.tts-tag');
+    specialTags1.forEach(function(tag) {
+        tag.style.display = 'none';
+    });
+} else { // Execute only when the you are editing a post
 // Dual mode for special tags
 const { addFilter } = wp.hooks;
 const { createHigherOrderComponent } = wp.compose;
+
 // Remove the class when needed
 function checkAndRemoveClasses(props) {
     let content = props.attributes.content;
@@ -61,7 +72,6 @@ function checkAndRemoveClasses(props) {
     }
 }
 let debouncedFunction = _.debounce(function(props) {
-    console.log("Debounced function triggered")
     if (props.attributes && props.attributes.content) {
         // Wrap break -one <span>
         let newContent = props.attributes.content.replace(/(?!<span class="tts-tag" data-time="\d+ms">)\/break (\d+)ms(?!<\/span>)/g, '<span class="tts-tag" data-time="$1ms">/break $1ms</span>');
@@ -78,6 +88,8 @@ let debouncedFunction = _.debounce(function(props) {
     }
     checkAndRemoveClasses(props)
 }, 300);
+// Execute only if in the admin area 
+
 const addSpecialClass = createHigherOrderComponent((BlockEdit) => {
     return (props) => {
         // Check if the block has a 'content' attribute
@@ -85,11 +97,13 @@ const addSpecialClass = createHigherOrderComponent((BlockEdit) => {
         const result = wp.element.createElement(BlockEdit,props);
 
         return result;
-      
+    
     };
-  }, 'addSpecialClass');
-  
+}, 'addSpecialClass');
+
 addFilter('editor.BlockEdit', 'tts/add-special-class', addSpecialClass);
+
+
 
 document.addEventListener("DOMContentLoaded", function() {
     var showButton = document.getElementById("showSettingsPopup");
@@ -115,11 +129,13 @@ document.addEventListener("DOMContentLoaded", function() {
         showButton.addEventListener("click", function(event) {
             event.preventDefault();
             popup.classList.remove("hidden");
+            showButton.classList.add("hidden");
         });
 
         closeButton.addEventListener("click", function(event) {
             event.preventDefault();
             popup.classList.add("hidden");
+            showButton.classList.remove("hidden");
         });
     } else {
         console.error("Buttons or popup not found");
@@ -127,6 +143,8 @@ document.addEventListener("DOMContentLoaded", function() {
     var manualSubmitButton = document.getElementById("manualSubmit");
     if (manualSubmitButton) {
         manualSubmitButton.addEventListener("click", function() {
+            document.getElementById("loading").style.display = "block"; // Show that its loading
+            console.log(document.getElementById("loading"));
             var settingsContainer = document.getElementById("settingsContainer");
             var language = settingsContainer.querySelector("input[name='language']:checked").value;
             var gender = settingsContainer.querySelector("input[name='gender']:checked").value;
@@ -154,17 +172,20 @@ document.addEventListener("DOMContentLoaded", function() {
                     body: formData,
                 })
                 .then(function(response) {
+                    document.getElementById("loading").style.display = "none"; // hide the loading element
                     return response.json();
                 })
                 .then(function(data) {
                     console.log(data);
                 })
                 .catch(function(error) {
+                    document.getElementById("loading").style.display = "none";
                     console.error("Error:", error);
                 });
             } else {
-                console.error("Settings conatiner not found");
+                console.error("Settings container not found");
             }
         });
     }
 });
+}

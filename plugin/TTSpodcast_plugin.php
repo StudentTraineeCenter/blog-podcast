@@ -10,21 +10,25 @@
 
 //Setup the azure key
 require "setenv.php";
-function enqueue_my_plugin_scripts() {
-    // Enqueue CSS
+// Enqueue necessary files for admin
+function enqueue_admin_scripts() {
     wp_enqueue_style('my-plugin-style', plugin_dir_url(__FILE__) . 'settings_style.css');
-
-    // Enqueue JavaScript
     wp_enqueue_script('my-plugin-script', plugin_dir_url(__FILE__) . 'settings_script.js', array('jquery'), '1.0', true);
-
     // Enqueue Iodash for debouncing
     wp_enqueue_script('lodash');
 }
-add_action('admin_enqueue_scripts', 'enqueue_my_plugin_scripts');
+add_action('admin_enqueue_scripts', 'enqueue_admin_scripts');
+// Enque necessary files for preview
 
-// Add meta box
+function enque_preview_scripts() {
+    // Enqueue CSS to hide the class
+    wp_enqueue_style('my-plugin-style', plugin_dir_url(__FILE__) . 'settings_style.css');
+}
+add_action('wp_enqueue_scripts', 'enque_preview_scripts');
+
+// Add meta box, only if in the admin area
 function add_my_custom_meta_box() {
-    add_meta_box('text_to_speech', 'Text to speech', 'my_settings_popup_callback', 'post');
+    add_meta_box('text_to_speech', 'Text to speech', 'my_settings_popup_callback', 'post','side', 'default');
 }
 add_action('add_meta_boxes', 'add_my_custom_meta_box');
 
@@ -32,24 +36,23 @@ add_action('add_meta_boxes', 'add_my_custom_meta_box');
 function my_settings_popup_callback() {
     ?>
     <div class="wrap">
-        <h3>Make voice file</h3>
         <button id="TagToggle">Toggle Tags</button>
         <button id="showSettingsPopup">Show Settings</button>
         <div id="settingsPopup" class="hidden">
-            <h3>Settings</h3>
+            <h3 id="Settings">Settings</h3>
             <button id="closeSettingsPopup">Close</button>
             <!-- Your settings here -->
             <div id="settingsContainer">
                 <label>Voice:</label>
                 <div id="language">
-                    <input type="radio" id="english" name="language" value="en-US">
+                    <input type="radio" id="english" name="language" value="en-US"checked>
                     <label for="english">English</label>
 
                     <input type="radio" id="czech" name="language" value="cs-CZ">
                     <label for="czech">Czech</label>
                 </div>
                 <div id="gender">
-                    <input type="radio" id="male" name="gender" value="male">
+                    <input type="radio" id="male" name="gender" value="male"checked>
                     <label for="male">Male</label>
 
                     <input type="radio" id="female" name="gender" value="female">
@@ -70,6 +73,7 @@ function my_settings_popup_callback() {
                 <input type="checkbox" id="alttext" name="alttext" value="true">
                 <!-- Submit button -->
                 <input type="button" value="Save audio file" id="manualSubmit">
+                <div id="loading" class="spinner" style="display:none;"></div>
             </div>
         </div>
     </div>
