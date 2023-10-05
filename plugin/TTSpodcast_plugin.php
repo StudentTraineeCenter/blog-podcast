@@ -19,12 +19,38 @@ function enqueue_admin_scripts() {
 }
 add_action('admin_enqueue_scripts', 'enqueue_admin_scripts');
 // Enque necessary files for preview
-
 function enque_preview_scripts() {
     // Enqueue CSS to hide the class
-    wp_enqueue_style('my-plugin-style', plugin_dir_url(__FILE__) . 'settings_style.css');
+    wp_enqueue_style('my-plugin-style', plugin_dir_url(__FILE__) . 'user.css');
 }
 add_action('wp_enqueue_scripts', 'enque_preview_scripts');
+
+// Remove the tts-tag element in the html that is dipslayed to the user, but keep it for the admin
+add_filter('the_content', 'destroy_special_tag');
+
+function destroy_special_tag($content) {
+    if (!is_admin()) { 
+        $dom = new DOMDocument;
+        @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $content, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        $tags = $dom->getElementsByTagName('span');
+        $tags_to_destroy =[];
+        foreach ($tags as $tag) {
+            $special = ('tts-tag' === $tag->getAttribute('class'));
+            if ($special) {
+                $tags_to_destroy[] = ['Node' => $tag, 'Onlychild' => (!$tag->previousSibling && !$tag->nextSibling)];
+            }
+        }
+        foreach ($tags_to_destroy as $dtag) {
+            $parent = $dtag['Node']->parentNode;
+            $dtag['Node']->parentNode->removeChild($dtag['Node']);
+            if ($dtag['Onlychild']) {
+                $parent->parentNode->removeChild($parent);
+            }
+        }
+        $content = $dom->saveHTML();
+    }
+    return $content;
+}
 
 // Add meta box, only if in the admin area
 function add_my_custom_meta_box() {
@@ -75,6 +101,7 @@ function my_settings_popup_callback() {
                 <input type="button" value="Save audio file" id="manualSubmit">
                 <div id="loading" class="spinner" style="display:none;"></div>
             </div>
+            
         </div>
     </div>
     <?php
@@ -98,8 +125,7 @@ function replace_tag($htmlContent, $tagToFind, $tagToReplaceWith) {
     return $dom->saveHTML();
 }
 
-
-function convert_htmltotext($htmlContent,$alttext,$rate,$volume) {
+function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
     // Create a new DOMDocument object
     $dom = new DOMDocument;
 
@@ -111,26 +137,8 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume) {
     
     // Load the HTML content into the DOMDocument object
     @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $htmlContent, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
-    
-    // Remove all empty elements
     $xpath = new DOMXPath($dom);
 
-    // Select all elements
-    $allElements = $xpath->query('//*');
-    $preserveTags = ['img', 'br', 'hr'];  // Add more tags here if needed
-    // Loop through NodeList backwards to avoid index shifting during removal
-    for ($i = $allElements->length - 1; $i >= 0; $i--) {
-        $element = $allElements->item($i);
-        // Skip special empty tags like <img>, <br>, etc.
-        if (in_array($element->tagName, $preserveTags)) {
-            continue;
-        }
-        // Check if element is truly empty by trimming text content
-        if (!trim($element->nodeValue) && !$element->hasChildNodes()) {
-            $element->parentNode->removeChild($element);
-        }
-    }
-    
     // Replace the special funciton elements with their SSML
     $special_elements = $dom->getElementsByTagName('span');
     $elementsToRemove = [];
@@ -142,8 +150,6 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume) {
             $break = $dom->createElement('break');
             $break->setAttribute('time',$time);
             $elementsToReplace[] = ['newNode' => $break, 'oldNode' => $element];
-            error_log("break");
-            error_log(print_r($element->parentNode, true));
         }
         // Replace audio with SSML
         if ($element->hasAttribute('data-audio')) {
@@ -156,19 +162,16 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume) {
                 $url = preg_replace("/^(\w+\s)/","",$url);
                 $url = str_replace("'","",$url);
             }
-            $audio = $dom->createTextNode("</p></prosody><audio src='$url'></audio><prosody rate='$rate%' volume='$volume'><p>");
+            $audio = $dom->createTextNode("</p></prosody><audio src=\"$url\"></audio><prosody rate=\"$rate%\" volume=\"$volume\"><p>");
             $elementsToReplace[] = ['newNode' => $audio, 'oldNode' => $element];
-
         }
         // Replace text to be read with ssml text 
         if ($element->hasAttribute('data-text')) {
             $contenttxt = $element->nodeValue;
-            $contenttxt = str_replace("/txt", "", $contenttxt);
+            $contenttxt = str_replace("/read", "", $contenttxt);
             $contenttxt = str_replace(";", "", $contenttxt);
             $txt = $dom->createTextNode($contenttxt);
             $elementsToReplace[] = ['newNode' => $txt, 'oldNode' => $element];
-            error_log("txt");
-            error_log(print_r($element->parentNode, true));
         }
         // Replace the emphasis element with SSML
         if ($element->hasAttribute('data-level')) {
@@ -179,8 +182,21 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume) {
             $emphasis->nodeValue = $element->nextSibling->nodeValue;
             $elementsToReplace[] = ['newNode' => $emphasis, 'oldNode' => $element->nextSibling];
             $elementsToRemove[] = $element;
-            error_log("emp");
-            error_log(print_r($element->parentNode, true));
+        }
+        // Remove noread text 
+        if ($element->hasAttribute('data-noread')) {
+            $sibling = $element->nextSibling;
+            $elementsToRemove[] = $element;
+            $elementsToRemove[] = $sibling;
+        }
+        // Replace voice
+        if ($element->hasAttribute('data-voice')) {
+            $gender  = $element->getAttribute('data-voice');
+            $cz_voice = ($gender == 'male' ? "cs-CZ-AntoninNeural" : "cs-CZ-VlastaNeural");
+            $eng_voice = ($gender == 'male' ? "en-US-GuyNeural" : "en-US-JennyNeural");
+            $voice = ($language == 'cs-CZ' ? $cz_voice : $eng_voice);
+            $velement = $dom->createTextNode("</p></prosody></voice><voice name=\"$voice\"><prosody rate=\"$rate%\" volume=\"$volume\"><p>");
+            $elementsToReplace[] = ['newNode' => $velement, 'oldNode' => $element];
         }
         // Remove the ending quotes 
         if ($element->hasAttribute('data-quote')) {
@@ -216,7 +232,21 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume) {
         }
         
     }
- 
+    // Remove all empty elements
+    $allElements = $xpath->query('//*');
+    $preserveTags = ['img', 'br', 'hr'];  // Add more tags here if needed
+    // Loop through NodeList backwards to avoid index shifting during removal
+    for ($i = $allElements->length - 1; $i >= 0; $i--) {
+        $element = $allElements->item($i);
+        // Skip special empty tags like <img>, <br>, etc.
+        if (in_array($element->tagName, $preserveTags)) {
+            continue;
+        }
+        // Check if element is truly empty by trimming text content
+        if (!trim($element->nodeValue) && !$element->hasChildNodes()) {
+            $element->parentNode->removeChild($element);
+        }
+    }
     // Remove all other HTML tags
     $modifiedHtml = $dom->saveHTML();
 
@@ -251,7 +281,7 @@ function handle_ajax_request() {
     // Get the html from the post and convert it to readable text  
     $post = get_post($post_id);
     $article_html = $post->post_content;
-    $text = convert_htmltotext($article_html,$alttext,$rate,$volume);
+    $text = convert_htmltotext($article_html,$alttext,$rate,$volume,$language);
     // SSML
     $ssml = <<<EOD
     <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="$language">
@@ -285,7 +315,6 @@ function handle_ajax_request() {
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers1);
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    error_log("Curl has been setup");
     // Execute the request and get the audio data
     $result = curl_exec($ch);
     // Check for errors
@@ -294,7 +323,6 @@ function handle_ajax_request() {
 
     } else {
         $token = $result;
-        error_log("Token recieved");
     }
     $contentLength = strlen($ssml);
 
@@ -310,7 +338,6 @@ function handle_ajax_request() {
     curl_setopt($ch, CURLOPT_POSTFIELDS, $ssml);
     curl_setopt($ch, CURLOPT_URL, $endpoint2); //Change the url to the second endpoint
 
-    error_log("Curl has been setup for the second time");
     // Execute the request and get the audio data
     $result = curl_exec($ch);
     // Check for errors
@@ -323,7 +350,7 @@ function handle_ajax_request() {
 
         $upload_dir = wp_upload_dir();
         // Create a unique file name
-        $filename = wp_unique_filename($upload_dir['path'], 'output.mp3');
+        $filename = wp_unique_filename($upload_dir['path'], $post_id.'.mp3');
 
         // Full path to the file
         $file_path = $upload_dir['path'] . '/' . $filename;
