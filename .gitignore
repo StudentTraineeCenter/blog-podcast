@@ -66,6 +66,8 @@ instance/
 # Scrapy stuff:
 .scrapy
 
+# exclude setting the key 
+setenv.php
 # Sphinx documentation
 docs/_build/
 

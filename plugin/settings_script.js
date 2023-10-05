@@ -1,6 +1,4 @@
 // Hide all the special tags in preview mode
-
-console.log(typenow);
 if (typenow != "post") {
     console.log("Triggered, typenow:".typenow)
     const specialTags1 = document.querySelectorAll('.tts-tag');
@@ -21,11 +19,15 @@ function checkAndRemoveClasses(props) {
     const firstSpans = doc.querySelectorAll('[data-level]');
     const secondSpans = doc.querySelectorAll('[data-quote]');
     // break
-    const thirdSpans = doc.querySelectorAll('[data-time]')
-    // txt
-    const fourthSpans = doc.querySelectorAll('[data-text]')
+    const thirdSpans = doc.querySelectorAll('[data-time]');
+    // read
+    const fourthSpans = doc.querySelectorAll('[data-text]');
     // audio
-    const fifthSpans = doc.querySelectorAll('[data-audio]')
+    const fifthSpans = doc.querySelectorAll('[data-audio]');
+    // noread
+    const sixthSpans = doc.querySelectorAll('[data-noread]');
+    // voice
+    const seventhSpans = doc.querySelectorAll('[data-voice]');
     let changed = false;
     // emp
     firstSpans.forEach((span) => {
@@ -51,20 +53,34 @@ function checkAndRemoveClasses(props) {
             changed = true;
         }
     });
-    // txt
+    // read
     fourthSpans.forEach((span) => {
-        let isValid = /\/txt ;([^;]+);/.test(span.textContent);
+        let isValid = /\/read ;[^;]+;/.test(span.textContent);
         if (!isValid) {
             span.outerHTML = span.textContent;
             changed = true;
         }
     });
     fifthSpans.forEach((span) => {
-        let isValid = /\/audio '([^']+)'/.test(span.textContent);
+        let isValid = /\/audio '[^']+'/.test(span.textContent);
         if (!isValid) {
             span.outerHTML = span.textContent;
             changed = true;
         }
+    });
+    sixthSpans.forEach((span) => {
+        let isValid = /\/noread '/.test(span.textContent);
+        if (!isValid) {
+            span.outerHTML = span.textContent;
+            changed = true;
+        }
+    seventhSpans.forEach((span) => {
+        let isValid = /\/voice '[^']+'/.test(span.textContent);
+        if (!isValid) {
+            span.outerHTML = span.textContent;
+            changed = true;
+        }
+    });
     });
   
     if (changed) {
@@ -77,10 +93,14 @@ let debouncedFunction = _.debounce(function(props) {
         let newContent = props.attributes.content.replace(/(?!<span class="tts-tag" data-time="\d+ms">)\/break (\d+)ms(?!<\/span>)/g, '<span class="tts-tag" data-time="$1ms">/break $1ms</span>');
         // Wrap emp -two <span>
         newContent = newContent.replace(/(?!<span class="tts-tag" data-level="[^"]+">)\/emp ([^']+) '([^']+)'(?!<\/span>)/g, '<span class="tts-tag" data-level="$1">/emp $1 \'</span>$2<span class="tts-tag" data-quote="true">\'</span>');
-        // Wrap txt -one <span>
-        newContent = newContent.replace(/(?!<span class="tts-tag" data-text="true">)\/txt ;([^;]+);(?!<\/span>)/g, '<span class="tts-tag" data-text="true">/txt ;$1;</span>');
+        // Wrap read to be read but not visible -one <span>
+        newContent = newContent.replace(/(?!<span class="tts-tag" data-text="true">)\/read ;([^;]+);(?!<\/span>)/g, '<span class="tts-tag" data-text="true">/read ;$1;</span>');
         // Wrap audio -one <span>
         newContent = newContent.replace(/(?!<span class="tts-tag" data-audio="true">)\/audio '([^']+)'(?!<\/span>)/g, '<span class="tts-tag" data-audio="true">/audio \'$1\'</span>');
+        // Wrap text no to be read but visible -one <span>
+        newContent = newContent.replace(/(?!<span class="tts-tag" data-noread="true">)\/noread '([^']+)'(?!<\/span>)/g, '<span class="tts-tag" data-noread="true">/noread \'</span>$1<span class="tts-tag" data-quote="true">\'</span>');
+        // Wrap voice -one <span>
+        newContent = newContent.replace(/(?!<span class="tts-tag" data-voice="[^']+">)\/voice '([^']+)'(?!<\/span>)/g, '<span class="tts-tag" data-voice="$1">/voice \'$1\'</span>');
         if (props.attributes.content != newContent) {
             console.log(newContent);
         }
@@ -102,8 +122,6 @@ const addSpecialClass = createHigherOrderComponent((BlockEdit) => {
 }, 'addSpecialClass');
 
 addFilter('editor.BlockEdit', 'tts/add-special-class', addSpecialClass);
-
-
 
 document.addEventListener("DOMContentLoaded", function() {
     var showButton = document.getElementById("showSettingsPopup");

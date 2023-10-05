@@ -1,5 +1,5 @@
 
-  .hidden {
+  .hidden:not(#loading) {
     display: none;
     position: fixed;
     top: 50%;
@@ -22,15 +22,13 @@
     line-height: 1.5;
     color: #2978ff;
   }
-  .tts-tag {
-    display: none;
-  }
-  .loading {
-    border: 5px solid var(--light-gray);
+  .spinner {
+    border: 10px solid #ffffff;
     border-radius: 50%;
-    border-top: 5px solid var(--blue);
-    width: 50px;
-    height: 50px;
+    border-top: 10px solid #2978ff;
+    visibility: visible;
+    width: 10px;
+    height: 10px;
     animation: spin 1s linear infinite;
   }
   
