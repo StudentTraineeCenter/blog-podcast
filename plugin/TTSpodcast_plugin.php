@@ -8,8 +8,6 @@
  * Author URI: https://yourwebsite.com
  */
 
-//Setup the azure key
-require "setenv.php";
 // Enqueue necessary files for admin
 function enqueue_admin_scripts() {
     wp_enqueue_style('my-plugin-style', plugin_dir_url(__FILE__) . 'settings_style.css');
@@ -51,7 +49,53 @@ function destroy_special_tag($content) {
     }
     return $content;
 }
+// Add a settings page
+add_action('admin_menu','tts_settings');
 
+function tts_settings(){
+    add_menu_page('TTS-Podcast_settings', 'TTS-Podcast', 'manage_options', 'my_plugin_slug', 'tts_settings_page', 'dashicons-controls-volumeon', 99);
+}
+// Register the setting
+add_action('admin_init', 'settings_init');
+
+function settings_init() {
+    register_setting('tts-options', 'azure_key');
+    register_setting('tts-options', 'starting_theme_url');
+    register_setting('tts-options', 'ending_theme_url');
+}
+
+// Be able to set default theme, set the azure key 
+function tts_settings_page() {
+    ?>
+    <h1>Text to speech settings</h1>
+    <form id="tts-settings-form" method="post" action="options.php">
+        <?php settings_fields('tts-options'); ?>
+        <?php do_settings_sections('tts-options'); ?>
+        <div>
+            <label for="azure_key">Your azure key:    </label>
+            <input type="text" id="azure_key" name="azure_key" value="<?php echo get_option('azure_key'); ?>" style="width: 200px;" oninput="autoExpand(this)"><br>
+        </div>
+        <div>
+            <label for="starting_theme_url">Starting theme url:</label>
+            <input type="text" id="starting_theme_url" name="starting_theme_url" value="<?php echo get_option('starting_theme_url'); ?>"style="width: 200px;" oninput="autoExpand(this)"><br>
+        </div>
+        <div>
+            <label for="ending_theme_url">Ending theme url:  </label>
+            <input type="text" id="ending_theme_url" name="ending_theme_url" value="<?php echo get_option('ending_theme_url'); ?>"style="width: 200px;" oninput="autoExpand(this)">
+        </div>
+        <?php submit_button('Save Changes', 'primary', 'submit', true, array('id' => 'submitBtn')); ?>
+    </form>
+    <span id="message"></span>
+    <script>
+    document.getElementById('submitBtn').addEventListener('click', function() {
+    document.getElementById('message').textContent = 'Changes Saved';
+    setTimeout(() => {
+        document.getElementById('message').textContent = '';
+    }, 2000); // Remove message after 1 second
+    });
+    </script>
+    <?php
+}
 // Add meta box, only if in the admin area
 function add_my_custom_meta_box() {
     add_meta_box('text_to_speech', 'Text to speech', 'my_settings_popup_callback', 'post','side', 'default');
@@ -162,7 +206,7 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
                 $url = preg_replace("/^(\w+\s)/","",$url);
                 $url = str_replace("'","",$url);
             }
-            $audio = $dom->createTextNode("</p></prosody><audio src=\"$url\"></audio><prosody rate=\"$rate%\" volume=\"$volume\"><p>");
+            $audio = $dom->createTextNode("</p></prosody><audio src=\"$url\">didn't get your mp3 audio file</audio><prosody rate=\"$rate%\" volume=\"$volume\"><p>");
             $elementsToReplace[] = ['newNode' => $audio, 'oldNode' => $element];
         }
         // Replace text to be read with ssml text 
@@ -170,6 +214,7 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
             $contenttxt = $element->nodeValue;
             $contenttxt = str_replace("/read", "", $contenttxt);
             $contenttxt = str_replace(";", "", $contenttxt);
+            $contenttxt = str_replace("/", "", $contenttxt);
             $txt = $dom->createTextNode($contenttxt);
             $elementsToReplace[] = ['newNode' => $txt, 'oldNode' => $element];
         }
@@ -234,7 +279,7 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
     }
     // Remove all empty elements
     $allElements = $xpath->query('//*');
-    $preserveTags = ['img', 'br', 'hr'];  // Add more tags here if needed
+    $preserveTags = ['img', 'br', 'hr','break','audio'];  // Add more tags here if needed
     // Loop through NodeList backwards to avoid index shifting during removal
     for ($i = $allElements->length - 1; $i >= 0; $i--) {
         $element = $allElements->item($i);
@@ -267,13 +312,15 @@ function handle_ajax_request() {
     $gender = $_POST['gender'];
     $alttext = $_POST['alttext'];
     $volume = $_POST['volume'];
+    $ending_theme = get_option('ending_theme_url');
+    $starting_theme = get_option('starting_theme_url');
     //Select the voice based on language and gender
     $cz_voice = ($gender == 'male' ? "cs-CZ-AntoninNeural" : "cs-CZ-VlastaNeural");
     $eng_voice = ($gender == 'male' ? "en-US-GuyNeural" : "en-US-JennyNeural");
     $voice = ($language == 'cs-CZ' ? $cz_voice : $eng_voice);
     //Parse the speed
     $rate = floatval($speed) -100;
-    if ($rate>0) {
+    if ($rate>0 || $rate == 0) {
         $rate = "+" . $rate;
     } else {
         $rate ="$rate";
@@ -281,24 +328,30 @@ function handle_ajax_request() {
     // Get the html from the post and convert it to readable text  
     $post = get_post($post_id);
     $article_html = $post->post_content;
+    $starting_theme = $starting_theme ? "<audio src=\"$starting_theme\">didn't get your MP3 audio file</audio>" : "";
+    $ending_theme = $ending_theme ? "<audio src=\"$ending_theme\">didn't get your MP3 audio file</audio>" : "";
     $text = convert_htmltotext($article_html,$alttext,$rate,$volume,$language);
     // SSML
     $ssml = <<<EOD
     <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="$language">
         <voice name="$voice">
+            $starting_theme
             <prosody rate="$rate%" volume="$volume">
                 $text
             </prosody>
+            $ending_theme
         </voice>
     </speak>
     EOD;
     error_log("ssml:$ssml");
     // Process data here
-    // Your Azure subscription key
+    $subscriptionKey = get_option('azure_key');
+    error_log($subscriptionKey);
+    if (!$subscriptionKey) {
+        wp_send_json_error(['message' => 'Please enter a valid azure key']);
+    }
 
-    $subscriptionKey = getenv('AZURE_KEY');
-
-    // Your Azure endpoint
+    // Azure endpoint
     $endpoint1 = 'https://eastus.api.cognitive.microsoft.com/sts/v1.0/issuetoken';
     $endpoint2 = 'https://eastus.tts.speech.microsoft.com/cognitiveservices/v1';
 
@@ -349,15 +402,9 @@ function handle_ajax_request() {
         error_log($httpcode);
 
         $upload_dir = wp_upload_dir();
-        // Create a unique file name
         $filename = wp_unique_filename($upload_dir['path'], $post_id.'.mp3');
-
-        // Full path to the file
         $file_path = $upload_dir['path'] . '/' . $filename;
-
-        // Save the audio data as an MP3 file
         file_put_contents($file_path, $result);
-        // File type
         $wp_filetype = wp_check_filetype($filename, null);
 
         // Prepare an array of post data for the attachment.

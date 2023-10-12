@@ -36,4 +36,20 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
-  
+  #tts-settings-form {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #tts-settings-form div {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #tts-settings-form label {
+    margin-bottom: 4px;
+    color: #2978ff;
+    font-size: 20px;
+    max-width: 300px;
+    flex: 1;
+  }
