@@ -146,14 +146,12 @@ const addSpecialClass = createHigherOrderComponent((BlockEdit) => {
 addFilter('editor.BlockEdit', 'tts/add-special-class', addSpecialClass);
 
 document.addEventListener("DOMContentLoaded", function() {
-    var showButton = document.getElementById("showSettingsPopup");
-    var closeButton = document.getElementById("closeSettingsPopup");
     var popup = document.getElementById("settingsPopup");
     var tagToggle = document.getElementById("TagToggle");
     console.log("DOMContentLoaded event fired")
     // Check if buttons and popup exist in the DOM
-    if(showButton && closeButton && popup && tagToggle) {
-        let active = false;
+    if(popup && tagToggle) {
+        let active = true;
         tagToggle.addEventListener('click', function() {
             const specialTags = document.querySelectorAll('.tts-tag');
             active = !active;
@@ -165,18 +163,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             });
         });
-
-        showButton.addEventListener("click", function(event) {
-            event.preventDefault();
-            popup.classList.remove("hidden");
-            showButton.classList.add("hidden");
-        });
-
-        closeButton.addEventListener("click", function(event) {
-            event.preventDefault();
-            popup.classList.add("hidden");
-            showButton.classList.remove("hidden");
-        });
+        // Show the settings
+        popup.classList.remove("hidden");
+        // Show the speed value next to the slider
+        var speed_slider = document.getElementById("speed");
+        var speed_value = document.getElementById("speed_value");
+        function change_speed_value() {
+            var speed_set = settingsContainer.querySelector("input[name='speed']").value;
+            speed_value.textContent = speed_set + "%" ;
+        }
+        speed_slider.addEventListener('input', change_speed_value);
     } else {
         console.error("Buttons or popup not found");
     }

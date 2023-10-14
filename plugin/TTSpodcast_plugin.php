@@ -84,8 +84,8 @@ function tts_settings_page() {
             <input type="text" id="ending_theme_url" name="ending_theme_url" value="<?php echo get_option('ending_theme_url'); ?>"style="width: 200px;" oninput="autoExpand(this)">
         </div>
         <?php submit_button('Save Changes', 'primary', 'submit', true, array('id' => 'submitBtn')); ?>
-    </form>
     <span id="message"></span>
+    </form>
     <script>
     document.getElementById('submitBtn').addEventListener('click', function() {
     document.getElementById('message').textContent = 'Changes Saved';
@@ -107,10 +107,8 @@ function my_settings_popup_callback() {
     ?>
     <div class="wrap">
         <button id="TagToggle">Toggle Tags</button>
-        <button id="showSettingsPopup">Show Settings</button>
         <div id="settingsPopup" class="hidden">
             <h3 id="Settings">Settings</h3>
-            <button id="closeSettingsPopup">Close</button>
             <!-- Your settings here -->
             <div id="settingsContainer">
                 <label>Voice:</label>
@@ -128,19 +126,26 @@ function my_settings_popup_callback() {
                     <input type="radio" id="female" name="gender" value="female">
                     <label for="female">Female</label>
                 </div>
-                <label for="speed">Speed:</label>
-                <input type="range" id="speed" name="speed" min="50" max="200" value="100">
-                <label for="volume">Volume:</label>
-                <select id="volume" name="volume">
-                    <option value="default">Default</option>
-                    <option value="x-soft">X-Soft</option>
-                    <option value="soft">Soft</option>
-                    <option value="medium">Medium</option>
-                    <option value="loud">Loud</option>
-                    <option value="x-loud">X-Loud</option>
+                <div id="speed_setting">
+                    <label for="speed">Speed:</label>
+                    <input type="range" id="speed" name="speed" min="50" max="200" value="100">
+                    <span id="speed_value">100%</span>
+                </div>
+                <div id="volume_setting">
+                    <label for="volume">Volume:</label>
+                    <select id="volume" name="volume">
+                        <option value="default">Default</option>
+                        <option value="x-soft">X-Soft</option>
+                        <option value="soft">Soft</option>
+                        <option value="medium">Medium</option>
+                        <option value="loud">Loud</option>
+                        <option value="x-loud">X-Loud</option>
                 </select>
-                <label for="alttext">Include image alt</label>
-                <input type="checkbox" id="alttext" name="alttext" value="true">
+                </div>
+                <div id="alltext">
+                    <label for="alttext">Include image alt</label>
+                    <input type="checkbox" id="alttext" name="alttext" value="true">
+                </div>
                 <!-- Submit button -->
                 <input type="button" value="Save audio file" id="manualSubmit">
                 <div id="loading" class="spinner" style="display:none;"></div>
@@ -172,7 +177,6 @@ function replace_tag($htmlContent, $tagToFind, $tagToReplaceWith) {
 function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
     // Create a new DOMDocument object
     $dom = new DOMDocument;
-
     // Replace all titles, lists and others with <p>
     $tags = array('h4','h3','h2','h1','li');
     foreach ($tags as $tag) {
@@ -303,8 +307,6 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
     return $textContent;
 }
 
-
-
 function handle_ajax_request() {
     $language = $_POST['language'];
     $speed = $_POST['speed'];
@@ -328,6 +330,7 @@ function handle_ajax_request() {
     // Get the html from the post and convert it to readable text  
     $post = get_post($post_id);
     $article_html = $post->post_content;
+    $title = $post->post_title;
     $starting_theme = $starting_theme ? "<audio src=\"$starting_theme\">didn't get your MP3 audio file</audio>" : "";
     $ending_theme = $ending_theme ? "<audio src=\"$ending_theme\">didn't get your MP3 audio file</audio>" : "";
     $text = convert_htmltotext($article_html,$alttext,$rate,$volume,$language);
@@ -400,9 +403,8 @@ function handle_ajax_request() {
         // Get WordPress upload directory info
         $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         error_log($httpcode);
-
         $upload_dir = wp_upload_dir();
-        $filename = wp_unique_filename($upload_dir['path'], $post_id.'.mp3');
+        $filename = wp_unique_filename($upload_dir['path'], $title.'.mp3');
         $file_path = $upload_dir['path'] . '/' . $filename;
         file_put_contents($file_path, $result);
         $wp_filetype = wp_check_filetype($filename, null);
@@ -419,7 +421,7 @@ function handle_ajax_request() {
         $post_id = intval($_POST['post_id']); // Make sure to sanitize and validate
 
         // Insert the attachment.
-        $attach_id = wp_insert_attachment($attachment, $file_path, $post_id);  // $post_id is the ID of the post you're attaching to
+        $attach_id = wp_insert_attachment($attachment, $file_path, $post_id);
 
         // Make sure to include the WordPress image.php file
         require_once(ABSPATH . 'wp-admin/includes/image.php');
