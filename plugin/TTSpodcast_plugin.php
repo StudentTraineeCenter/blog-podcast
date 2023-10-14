@@ -86,6 +86,12 @@ function tts_settings_page() {
         <?php submit_button('Save Changes', 'primary', 'submit', true, array('id' => 'submitBtn')); ?>
     <span id="message"></span>
     </form>
+    <div id="azure_deployment">
+        <label for="deploy_button">Deploy your resource to azure and copy the key:</label>
+        <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https://raw.githubusercontent.com/FilBlack/STC_blog_podcast/master/azure_deploy.json" target="_blank">
+            <img id ="deploy_button" src="https://aka.ms/deploytoazurebutton" alt="Deploy to Azure">
+        </a>
+    </div>
     <script>
     document.getElementById('submitBtn').addEventListener('click', function() {
     document.getElementById('message').textContent = 'Changes Saved';

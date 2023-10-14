@@ -10,6 +10,7 @@
     background-color: #6f46d9;
     z-index: 9999;
   }
+
   #text_to_speech {
     background-color: #ffffff;
     border: 1px solid #000000;
@@ -21,6 +22,7 @@
     line-height: 1.5;
     color: #2978ff;
   }
+
   .spinner {
     border: 10px solid #ffffff;
     border-radius: 50%;
@@ -30,11 +32,12 @@
     height: 10px;
     animation: spin 1s linear infinite;
   }
-  
+
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+
   #tts-settings-form {
     display: flex;
     flex-direction: column;
@@ -50,6 +53,18 @@
     color: #2978ff;
     font-size: 20px;
     max-width: 300px;
+    flex: 1;
+  }
+
+  #azure_deployment {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #azure_deployment label {
+    margin-bottom: 8px;
+    color: #2978ff;
+    font-size: 20px;
     flex: 1;
   }
 
