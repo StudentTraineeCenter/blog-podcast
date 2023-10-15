@@ -1,8 +1,1 @@
-Change the regex check to include any whitespace, not just spacebar
-Make the settings page prettier and use the options in the ajax callback 
-    - Fix the css for the form
-    - Add an easy way to setup the azure key 
-Change all ' to {} to make it more fool proof 
-Fix the regex with /emp and /noread - the remaining problem is with ' because it gets deleted completely together with the span
-
 Make documentation 

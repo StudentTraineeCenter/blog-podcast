@@ -212,9 +212,12 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
             if ($aTags->length == 1) {
                 $url = $aTags->getAttribute('href');
             } else {
+                // Hande the content of audio
                 $url = $element->nodeValue;
-                $url = preg_replace("/^(\w+\s)/","",$url);
+                error_log("Replace should have happened.");
+                $url = preg_replace("/\/audio\s+/","",$url);
                 $url = str_replace("'","",$url);
+                $url = substr($url, 0, -1);
             }
             $audio = $dom->createTextNode("</p></prosody><audio src=\"$url\">didn't get your mp3 audio file</audio><prosody rate=\"$rate%\" volume=\"$volume\"><p>");
             $elementsToReplace[] = ['newNode' => $audio, 'oldNode' => $element];
