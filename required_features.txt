@@ -1,6 +1,5 @@
 Make documentation 
-Make hash for azure key
-make () instead of / in tags
+encrypt the key, somehow do that 
 make repo under STC and add yoursef as member of STC
 make deploy to azure show clickable
-edit endpoint ot users region
+fix error with higher order element

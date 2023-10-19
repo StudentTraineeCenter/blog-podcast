@@ -16,12 +16,6 @@ function enqueue_admin_scripts() {
     wp_enqueue_script('lodash');
 }
 add_action('admin_enqueue_scripts', 'enqueue_admin_scripts');
-// Enque necessary files for preview
-function enque_preview_scripts() {
-    // Enqueue CSS to hide the class
-    wp_enqueue_style('my-plugin-style', plugin_dir_url(__FILE__) . 'user.css');
-}
-add_action('wp_enqueue_scripts', 'enque_preview_scripts');
 
 // Remove the tts-tag element in the html that is dipslayed to the user, but keep it for the admin
 add_filter('the_content', 'destroy_special_tag');
@@ -220,7 +214,7 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
                 // Hande the content of audio
                 $url = $element->nodeValue;
                 error_log("Replace should have happened.");
-                $url = preg_replace("/\/audio\s+/","",$url);
+                $url = preg_replace("/\{audio\s+/","",$url);
                 $url = str_replace("'","",$url);
                 $url = substr($url, 0, -1);
             }
@@ -230,9 +224,9 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
         // Replace text to be read with ssml text 
         if ($element->hasAttribute('data-text')) {
             $contenttxt = $element->nodeValue;
-            $contenttxt = str_replace("/read", "", $contenttxt);
+            $contenttxt = str_replace("{read", "", $contenttxt);
             $contenttxt = str_replace(";", "", $contenttxt);
-            $contenttxt = str_replace("/", "", $contenttxt);
+            $contenttxt = str_replace("}", "", $contenttxt);
             $txt = $dom->createTextNode($contenttxt);
             $elementsToReplace[] = ['newNode' => $txt, 'oldNode' => $element];
         }
@@ -292,8 +286,7 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
         for ($i = $length - 1; $i >= 0; $i--) {
             $image = $images->item($i);
             $image->parentNode->removeChild($image);
-        }
-        
+        } 
     }
     // Remove all empty elements
     $allElements = $xpath->query('//*');
@@ -330,6 +323,7 @@ function handle_ajax_request() {
     $volume = $_POST['volume'];
     $ending_theme = get_option('ending_theme_url');
     $starting_theme = get_option('starting_theme_url');
+    $endpoint_cookie = get_option('azure_endpoint');
     //Select the voice based on language and gender
     $cz_voice = ($gender == 'male' ? "cs-CZ-AntoninNeural" : "cs-CZ-VlastaNeural");
     $eng_voice = ($gender == 'male' ? "en-US-GuyNeural" : "en-US-JennyNeural");
@@ -361,6 +355,7 @@ function handle_ajax_request() {
     </speak>
     EOD;
     error_log("ssml:$ssml");
+    // Illuminati -Ondra
     // Process data here
     $subscriptionKey = get_option('azure_key');
     error_log($subscriptionKey);
@@ -369,13 +364,14 @@ function handle_ajax_request() {
     }
 
     // Azure endpoint
-    $endpoint1 = 'https://eastus.api.cognitive.microsoft.com/sts/v1.0/issuetoken';
-    $endpoint2 = 'https://eastus.tts.speech.microsoft.com/cognitiveservices/v1';
+    $endpoint1 = get_option('azure_endpoint');
+    // Steal the region from the first endpoint
+    $region = explode('.',$endpoint1)[0];
+    $endpoint_cognitive = $region . '.tts.speech.microsoft.com/cognitiveservices/v1';
 
     // Set up cURL
     $ch = curl_init($endpoint1);
 
-    
     // Set up the headers
     $headers1 = [
         'Ocp-Apim-Subscription-Key: ' . $subscriptionKey,
@@ -406,7 +402,7 @@ function handle_ajax_request() {
     ];
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers2);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $ssml);
-    curl_setopt($ch, CURLOPT_URL, $endpoint2); //Change the url to the second endpoint
+    curl_setopt($ch, CURLOPT_URL, $endpoint_cognitive); //Change the url to the second endpoint
 
     // Execute the request and get the audio data
     $result = curl_exec($ch);
