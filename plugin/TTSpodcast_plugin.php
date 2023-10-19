@@ -62,6 +62,7 @@ function settings_init() {
     register_setting('tts-options', 'azure_key');
     register_setting('tts-options', 'starting_theme_url');
     register_setting('tts-options', 'ending_theme_url');
+    register_setting('tts-options', 'azure_endpoint');
 }
 
 // Be able to set default theme, set the azure key 
@@ -72,15 +73,19 @@ function tts_settings_page() {
         <?php settings_fields('tts-options'); ?>
         <?php do_settings_sections('tts-options'); ?>
         <div>
-            <label for="azure_key">Your azure key:    </label>
+            <label for="azure_key">Your azure key:</label><br>
             <input type="text" id="azure_key" name="azure_key" value="<?php echo get_option('azure_key'); ?>" style="width: 200px;" oninput="autoExpand(this)"><br>
         </div>
         <div>
-            <label for="starting_theme_url">Starting theme url:</label>
+            <label for="azure_endpoint">Your azure endpoint:</label><br>
+            <input type="text" id="azure_endpoint" name="azure_endpoint" value="<?php echo get_option('azure_endpoint'); ?>"style="width: 200px;" oninput="autoExpand(this)">
+        </div>
+        <div>
+            <label for="starting_theme_url">Starting theme url:</label><br>
             <input type="text" id="starting_theme_url" name="starting_theme_url" value="<?php echo get_option('starting_theme_url'); ?>"style="width: 200px;" oninput="autoExpand(this)"><br>
         </div>
         <div>
-            <label for="ending_theme_url">Ending theme url:  </label>
+            <label for="ending_theme_url">Ending theme url:</label><br>
             <input type="text" id="ending_theme_url" name="ending_theme_url" value="<?php echo get_option('ending_theme_url'); ?>"style="width: 200px;" oninput="autoExpand(this)">
         </div>
         <?php submit_button('Save Changes', 'primary', 'submit', true, array('id' => 'submitBtn')); ?>
@@ -88,9 +93,9 @@ function tts_settings_page() {
     </form>
     <div id="azure_deployment">
         <label for="deploy_button">Deploy your resource to azure and copy the key:</label>
-        <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https://raw.githubusercontent.com/FilBlack/STC_blog_podcast/master/azure_deploy.json" target="_blank">
-            <img id ="deploy_button" src="https://aka.ms/deploytoazurebutton" alt="Deploy to Azure">
-        </a>
+        <button id ="deploy_button" onclick="window.open('https://portal.azure.com/#create/Microsoft.Template/uri/https://raw.githubusercontent.com/FilBlack/STC_blog_podcast/master/azure_deploy.json')" target="_blank">
+            <img src="https://aka.ms/deploytoazurebutton" alt="Deploy to Azure">
+        </button>
     </div>
     <script>
     document.getElementById('submitBtn').addEventListener('click', function() {

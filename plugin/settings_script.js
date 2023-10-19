@@ -1,5 +1,5 @@
 // Function to expand the input box with text inside it 
-function autoExpand(input) {
+function autoExpand(input) {  
     input.style.width = 'auto';
     let stretchedWidth = input.scrollWidth;
     stretchedWidth += 10;

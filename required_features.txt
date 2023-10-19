@@ -1,1 +1,6 @@
 Make documentation 
+Make hash for azure key
+make () instead of / in tags
+make repo under STC and add yoursef as member of STC
+make deploy to azure show clickable
+edit endpoint ot users region
