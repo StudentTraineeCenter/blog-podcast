@@ -6,14 +6,13 @@ function autoExpand(input) {
     input.style.width = stretchedWidth + 'px';
 }
 
-// Hide all the special tags in preview mode
-if (typenow != "post") {
-    console.log("Triggered, typenow:".typenow)
+// Check the url to see if editing a post or not
+if (window.location.href.indexOf('/post.php')=== -1) {
     const specialTags1 = document.querySelectorAll('.tts-tag');
     specialTags1.forEach(function(tag) {
         tag.style.display = 'none';
     });
-} else { // Execute only when the you are editing a post
+} else { 
 // Dual mode for special tags
 const { addFilter } = wp.hooks;
 const { createHigherOrderComponent } = wp.compose;
@@ -110,6 +109,7 @@ function checkAndRemoveClasses(props) {
         props.setAttributes({ content: doc.body.innerHTML });
     }
 }
+// Debounce to improve the performance
 let debouncedFunction = _.debounce(function(props) {
     if (props.attributes && props.attributes.content) {
         // Wrap break -one <span>
@@ -137,9 +137,7 @@ const addSpecialClass = createHigherOrderComponent((BlockEdit) => {
         // Check if the block has a 'content' attribute
         debouncedFunction(props)
         const result = wp.element.createElement(BlockEdit,props);
-
         return result;
-    
     };
 }, 'addSpecialClass');
 
