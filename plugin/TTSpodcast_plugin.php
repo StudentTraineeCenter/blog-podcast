@@ -68,7 +68,10 @@ function tts_settings_page() {
         <?php do_settings_sections('tts-options'); ?>
         <div>
             <label for="azure_key">Your azure key:</label><br>
-            <input type="text" id="azure_key" name="azure_key" value="<?php echo get_option('azure_key'); ?>" style="width: 200px;" oninput="autoExpand(this)"><br>
+            <div id="azure_key_flex">
+                <input type="password" id="azure_key" name="azure_key" value="<?php echo get_option('azure_key'); ?>" style="width: 200px;" oninput="autoExpand(this)"><br>
+                <button type="button" id="key_visibility">Show</button>
+            </div>
         </div>
         <div>
             <label for="azure_endpoint">Your azure endpoint:</label><br>
@@ -86,9 +89,9 @@ function tts_settings_page() {
     <span id="message"></span>
     </form>
     <div id="azure_deployment">
-        <label for="deploy_button">Deploy your resource to azure and copy the key:</label>
+        <label for="deploy_button">Deploy your resource to azure and copy the key with the endpoint:</label>
         <button id ="deploy_button" onclick="window.open('https://portal.azure.com/#create/Microsoft.Template/uri/https://raw.githubusercontent.com/FilBlack/STC_blog_podcast/master/azure_deploy.json')" target="_blank">
-            <img src="https://aka.ms/deploytoazurebutton" alt="Deploy to Azure">
+            <img id="deploy_button_image" src="https://aka.ms/deploytoazurebutton" alt="Deploy to Azure">
         </button>
     </div>
     <script>
@@ -221,15 +224,6 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
             $audio = $dom->createTextNode("</p></prosody><audio src=\"$url\">didn't get your mp3 audio file</audio><prosody rate=\"$rate%\" volume=\"$volume\"><p>");
             $elementsToReplace[] = ['newNode' => $audio, 'oldNode' => $element];
         }
-        // Replace text to be read with ssml text 
-        if ($element->hasAttribute('data-text')) {
-            $contenttxt = $element->nodeValue;
-            $contenttxt = str_replace("{read", "", $contenttxt);
-            $contenttxt = str_replace(";", "", $contenttxt);
-            $contenttxt = str_replace("}", "", $contenttxt);
-            $txt = $dom->createTextNode($contenttxt);
-            $elementsToReplace[] = ['newNode' => $txt, 'oldNode' => $element];
-        }
         // Replace the emphasis element with SSML
         if ($element->hasAttribute('data-level')) {
             $level = $element->getAttribute('data-level');
@@ -239,6 +233,15 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
             $emphasis->nodeValue = $element->nextSibling->nodeValue;
             $elementsToReplace[] = ['newNode' => $emphasis, 'oldNode' => $element->nextSibling];
             $elementsToRemove[] = $element;
+        }
+        // Replace text to be read with ssml text 
+        if ($element->hasAttribute('data-text')) {
+            $contenttxt = $element->nodeValue;
+            $contenttxt = str_replace("{read", "", $contenttxt);
+            $contenttxt = str_replace(";", "", $contenttxt);
+            $contenttxt = str_replace("}", "", $contenttxt);
+            $txt = $dom->createTextNode($contenttxt);
+            $elementsToReplace[] = ['newNode' => $txt, 'oldNode' => $element];
         }
         // Remove noread text 
         if ($element->hasAttribute('data-noread')) {

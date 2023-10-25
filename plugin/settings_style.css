@@ -49,12 +49,24 @@
     font-size: 20px;
     max-width: 300px;
   }
-
+  #tts-settings-form #azure_key_flex{
+    display:flex;
+    flex-direction: row;
+  }
+  #key_visibility {
+    width: auto;
+    height: 25px;
+    margin-top: 6px;
+  }
+  /*azure deploy button*/
   #azure_deployment {
     display: flex;
     flex-direction: column;
+    cursor: pointer;
   }
-
+  #deploy_button_image {
+    cursor: pointer
+  }
   #azure_deployment label {
     margin-bottom: 8px;
     color: #2978ff;
@@ -65,6 +77,7 @@
     border: none;
     width:80px;
   }
+
   /* speed slider and number */
   #speed_setting input[type="range"]{
     width: 120px !important;

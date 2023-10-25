@@ -5,6 +5,17 @@ function autoExpand(input) {
     stretchedWidth += 10;
     input.style.width = stretchedWidth + 'px';
 }
+// Show hidden password
+function togglePasswordVisibility() {
+    var inputElement = document.getElementById("azure_key");
+    if (inputElement.type === "password") {
+      inputElement.type = "text";
+    } else {
+      inputElement.type = "password";
+    }
+}
+var key_show_button = document.getElementById("key_visibility");
+key_show_button.addEventListener("click",togglePasswordVisibility);
 
 // Check the url to see if editing a post or not
 if (window.location.href.indexOf('/post.php')=== -1) {
@@ -143,6 +154,7 @@ const addSpecialClass = createHigherOrderComponent((BlockEdit) => {
 
 addFilter('editor.BlockEdit', 'tts/add-special-class', addSpecialClass);
 
+// Text to speech menu
 document.addEventListener("DOMContentLoaded", function() {
     var popup = document.getElementById("settingsPopup");
     var tagToggle = document.getElementById("TagToggle");

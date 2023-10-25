@@ -1,5 +1,6 @@
-Make documentation 
-encrypt the key, somehow do that 
 make repo under STC and add yoursef as member of STC
-make deploy to azure show clickable
-fix error with higher order element
+encrypt the key, somehow do that 
+Make documentation
+make plugin official on wordpress - Overkill, will be doing this just for STC, even though its public 
+Fix the emp and read so that they work together...... or just remove the shit feature? 
+test image alt text 
