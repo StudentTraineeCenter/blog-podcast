@@ -115,7 +115,7 @@ function my_settings_popup_callback() {
     ?>
     <div class="wrap">
         <button id="TagToggle">Toggle Tags</button>
-        <div id="settingsPopup" class="hidden">
+        <div id="settingsPopup">
             <h3 id="Settings">Settings</h3>
             <!-- Your settings here -->
             <div id="settingsContainer">
@@ -154,9 +154,15 @@ function my_settings_popup_callback() {
                     <label for="alttext">Include image alt</label>
                     <input type="checkbox" id="alttext" name="alttext" value="true">
                 </div>
+                <div>
+                    <label for="name_box">File name*:</label>
+                    <input type="text" id="name_box" name="name_box" value="">
+                    <div id="error">&nbsp;</id>
+                </div>
                 <!-- Submit button -->
                 <input type="button" value="Save audio file" id="manualSubmit">
                 <div id="loading" class="spinner" style="display:none;"></div>
+                <span id="file_save" style="display:none">File saved to media library!</span>
             </div>
             
         </div>
@@ -333,6 +339,7 @@ function handle_ajax_request() {
     $gender = $_POST['gender'];
     $alttext = $_POST['alttext'];
     $volume = $_POST['volume'];
+    $given_file_name = sanitize_text_field($_POST['file_name']);
     $ending_theme = get_option('ending_theme_url');
     $starting_theme = get_option('starting_theme_url');
     $endpoint_cookie = get_option('azure_endpoint');
@@ -350,7 +357,6 @@ function handle_ajax_request() {
     // Get the html from the post and convert it to readable text  
     $post = get_post($post_id);
     $article_html = $post->post_content;
-    $title = $post->post_title;
     $starting_theme = $starting_theme ? "<audio src=\"$starting_theme\">didn't get your MP3 audio file</audio>" : "";
     $ending_theme = $ending_theme ? "<audio src=\"$ending_theme\">didn't get your MP3 audio file</audio>" : "";
     $text = convert_htmltotext($article_html,$alttext,$rate,$volume,$language);
@@ -368,13 +374,12 @@ function handle_ajax_request() {
     EOD;
     error_log("ssml:$ssml");
     // Illuminati -Ondra
-    // Process data here
+    // First get a token from the users endpoint and then use it to request the audio from the azure tts endpoint
     $subscriptionKey = get_option('azure_key');
     error_log($subscriptionKey);
     if (!$subscriptionKey) {
         wp_send_json_error(['message' => 'Please enter a valid azure key']);
     }
-
     // Azure endpoint
     $endpoint1 = get_option('azure_endpoint');
     // Steal the region from the first endpoint
@@ -425,6 +430,11 @@ function handle_ajax_request() {
         // Get WordPress upload directory info
         $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         error_log($httpcode);
+        if ($given_file_name) {
+            $title = $given_file_name;
+        } else {
+            $title = $post->post_title;
+        }
         $upload_dir = wp_upload_dir();
         $filename = wp_unique_filename($upload_dir['path'], $title.'.mp3');
         $file_path = $upload_dir['path'] . '/' . $filename;
@@ -439,8 +449,8 @@ function handle_ajax_request() {
             'post_content'   => '',
             'post_status'    => 'inherit'
         );
-        //get the id of the post 
-        $post_id = intval($_POST['post_id']); // Make sure to sanitize and validate
+
+        $post_id = intval($_POST['post_id']); 
 
         // Insert the attachment.
         $attach_id = wp_insert_attachment($attachment, $file_path, $post_id);

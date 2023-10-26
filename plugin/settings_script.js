@@ -177,8 +177,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             });
         });
-        // Show the settings
-        popup.classList.remove("hidden");
         // Show the speed value next to the slider
         var speed_slider = document.getElementById("speed");
         var speed_value = document.getElementById("speed_value");
@@ -192,7 +190,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     var manualSubmitButton = document.getElementById("manualSubmit");
     if (manualSubmitButton) {
-        manualSubmitButton.addEventListener("click", function() {
+        manualSubmitButton.addEventListener("click", function(e) {
             document.getElementById("loading").style.display = "block"; // Show that its loading
             var settingsContainer = document.getElementById("settingsContainer");
             var language = settingsContainer.querySelector("input[name='language']:checked").value;
@@ -200,6 +198,20 @@ document.addEventListener("DOMContentLoaded", function() {
             var speed = settingsContainer.querySelector("input[name='speed']").value;
             var alttext = settingsContainer.querySelector("input[name='alttext']").checked ? "true" : "false";
             var volume =  settingsContainer.querySelector("select[name='volume']").value;
+            var file_name = settingsContainer.querySelector("input[name=name_box]").value;
+            // Check for invalid filenames
+            console.log(file_name);
+            const reservedCharacters = /[\/\\:\*\?"<>\|]/;
+            if (reservedCharacters.test(file_name)) {
+                console.log("check_triggered");
+                e.preventDefault();
+                document.getElementById("error").innerText = 'Invalid filename!';
+                setTimeout(function() {
+                    document.getElementById("error").innerText = " ";
+                  }, 2000);
+                document.getElementById("loading").style.display = "none";
+                return; 
+              }
             var formData = new FormData();
             var postId = document.querySelector("#post_ID").value;  // Get post ID from hidden field
             var inputs = [
@@ -207,7 +219,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 {name: 'gender', value: gender},
                 {name: 'speed', value: speed},
                 {name: 'alttext', value: alttext},
-                {name: 'volume', value: volume}
+                {name: 'volume', value: volume},
+                {name: 'file_name', value: file_name}
             ];
             inputs.forEach(function(input) {
                 formData.append(input.name, input.value);
@@ -221,7 +234,11 @@ document.addEventListener("DOMContentLoaded", function() {
                     body: formData,
                 })
                 .then(function(response) {
-                    document.getElementById("loading").style.display = "none"; // hide the loading element
+                    document.getElementById("loading").style.display = "none"; // Hide the loading element
+                    document.getElementById("file_save").style.display = "block" // Show successful file save
+                    setTimeout(function() {
+                        document.getElementById("file_save").style.display = "none";
+                      }, 2000);
                     return response.json();
                 })
                 .then(function(data) {
