@@ -15,8 +15,9 @@ function togglePasswordVisibility() {
     }
 }
 var key_show_button = document.getElementById("key_visibility");
-key_show_button.addEventListener("click",togglePasswordVisibility);
-
+if (key_show_button) {
+    key_show_button.addEventListener("click",togglePasswordVisibility);
+}
 // Check the url to see if editing a post or not
 if (window.location.href.indexOf('/post.php')=== -1) {
     const specialTags1 = document.querySelectorAll('.tts-tag');
@@ -83,7 +84,7 @@ function checkAndRemoveClasses(props) {
     });
     // read
     fourthSpans.forEach((span) => {
-        let isValid = /\{read\s+;[^;]+;\}/.test(span.textContent);
+        let isValid = /\{read\s+[^']*\s*'[^']+'\}/.test(span.textContent);
         if (!isValid) {
             span.outerHTML = span.textContent;
             changed = true;
@@ -124,17 +125,20 @@ function checkAndRemoveClasses(props) {
 let debouncedFunction = _.debounce(function(props) {
     if (props.attributes && props.attributes.content) {
         // Wrap break -one <span>
-        let newContent = props.attributes.content.replace(/(?!<span class="tts-tag" data-time="\d+ms">)\{break (\d+)ms\}(?!<\/span>)/g, '<span class="tts-tag" data-time="$1ms">{break $1ms}</span>');
+        let newContent = props.attributes.content.replace(/(?!<span class="tts-tag" data-time="true">)\{break (\d+)ms\}(?!<\/span>)/g, '<span class="tts-tag" data-time="true">{break $1ms}</span>');
         // Wrap emp -two <span>
-        newContent = newContent.replace(/(?!<span class="tts-tag" data-level="[^"]+">)\{emp\s+([^']+)\s+'([^']+)'\}(?!<\/span>)/g, '<span class="tts-tag" data-level="$1">{emp $1 \'</span>$2<span class="tts-tag" data-quote="true">\'}</span>');
-        // Wrap read to be read but not visible -one <span>
-        newContent = newContent.replace(/(?!<span class="tts-tag" data-text="true">)\{read\s+;([^;]+);\}(?!<\/span>)/g, '<span class="tts-tag" data-text="true">{read ;$1;}</span>');
+        newContent = newContent.replace(/(?!<span class="tts-tag" data-level="true">)\{emp\s+([^']+)\s+'([^']+)'\}(?!<\/span>)/g, '<span class="tts-tag" data-level="true">{emp $1 \'</span>$2<span class="tts-tag" data-quote="true">\'}</span>');
+        // Wrap read -one <span>
+        newContent = newContent.replace(/(?!<span class="tts-tag" data-text="true">)\{read\s+([^']*)\s*'([^']+)'\}(?!<\/span>)/g, function(match,p1,p2) {
+            const dataText = p1 ? p1 + " " : "";
+            return `<span class="tts-tag" data-text="true">{read ${dataText}'${p2}'}</span>`;
+        });        
         // Wrap audio -one <span>
         newContent = newContent.replace(/(?!<span class="tts-tag" data-audio="true">)\{audio\s+'([^']+)'\}(?!<\/span>)/g, '<span class="tts-tag" data-audio="true">{audio \'$1\'}</span>');
         // Wrap text no to be read but visible -one <span>
         newContent = newContent.replace(/(?!<span class="tts-tag" data-noread="true">)\{noread\s+'([^']+)'\}(?!<\/span>)/g, '<span class="tts-tag" data-noread="true">{noread \'</span>$1<span class="tts-tag" data-quote="true">\'}</span>');
         // Wrap voice -one <span>
-        newContent = newContent.replace(/(?!<span class="tts-tag" data-voice="[^']+">)\{voice\s+'([^']+)'\}(?!<\/span>)/g, '<span class="tts-tag" data-voice="$1">{voice \'$1\'}</span>');
+        newContent = newContent.replace(/(?!<span class="tts-tag" data-voice="true">)\{voice\s+'([^']+)'\}(?!<\/span>)/g, '<span class="tts-tag" data-voice="true">{voice \'$1\'}</span>');
         if (props.attributes.content != newContent) {
             console.log(newContent);
         }
@@ -190,7 +194,6 @@ document.addEventListener("DOMContentLoaded", function() {
     if (manualSubmitButton) {
         manualSubmitButton.addEventListener("click", function() {
             document.getElementById("loading").style.display = "block"; // Show that its loading
-            console.log(document.getElementById("loading"));
             var settingsContainer = document.getElementById("settingsContainer");
             var language = settingsContainer.querySelector("input[name='language']:checked").value;
             var gender = settingsContainer.querySelector("input[name='gender']:checked").value;

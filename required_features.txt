@@ -1,6 +1,5 @@
-make repo under STC and add yoursef as member of STC
-encrypt the key, somehow do that 
+make repo under STC change the address for the azure setup json
 Make documentation
 make plugin official on wordpress - Overkill, will be doing this just for STC, even though its public 
-Fix the emp and read so that they work together...... or just remove the shit feature? 
-test image alt text 
+Add something to tell that the audio is loaded to media library
+Add the option to name the file  

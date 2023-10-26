@@ -181,9 +181,8 @@ function replace_tag($htmlContent, $tagToFind, $tagToReplaceWith) {
 
     return $dom->saveHTML();
 }
-
+// Process the span element to be SSML
 function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
-    // Create a new DOMDocument object
     $dom = new DOMDocument;
     // Replace all titles, lists and others with <p>
     $tags = array('h4','h3','h2','h1','li');
@@ -195,14 +194,16 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
     @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $htmlContent, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
     $xpath = new DOMXPath($dom);
 
-    // Replace the special funciton elements with their SSML
+    // Replace the special function elements with their SSML
     $special_elements = $dom->getElementsByTagName('span');
     $elementsToRemove = [];
     $elementsToReplace = [];
     foreach ($special_elements as $element) {
         // Replace the break element with SSML
         if ($element->hasAttribute('data-time')) {
-            $time = $element->getAttribute('data-time');
+            // Extract the time variable for the SSML from the span 
+            $time = $element->nodeValue;
+            $time = preg_replace("/{\w+ (\d+)ms}/","$1ms",$time);
             $break = $dom->createElement('break');
             $break->setAttribute('time',$time);
             $elementsToReplace[] = ['newNode' => $break, 'oldNode' => $element];
@@ -216,7 +217,6 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
             } else {
                 // Hande the content of audio
                 $url = $element->nodeValue;
-                error_log("Replace should have happened.");
                 $url = preg_replace("/\{audio\s+/","",$url);
                 $url = str_replace("'","",$url);
                 $url = substr($url, 0, -1);
@@ -226,7 +226,8 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
         }
         // Replace the emphasis element with SSML
         if ($element->hasAttribute('data-level')) {
-            $level = $element->getAttribute('data-level');
+            $level = $element->nodeValue;
+            $level = preg_replace("/{emp (\w+)\s*'/","$1",$level);
             $emphasis = $dom->createElement('emphasis');
             $emphasis->setAttribute('level', $level);
             //replace <span>emp</span>'s sibling (the text to be emphasized) with the <emp> element
@@ -237,11 +238,18 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
         // Replace text to be read with ssml text 
         if ($element->hasAttribute('data-text')) {
             $contenttxt = $element->nodeValue;
-            $contenttxt = str_replace("{read", "", $contenttxt);
-            $contenttxt = str_replace(";", "", $contenttxt);
-            $contenttxt = str_replace("}", "", $contenttxt);
-            $txt = $dom->createTextNode($contenttxt);
-            $elementsToReplace[] = ['newNode' => $txt, 'oldNode' => $element];
+            $level = preg_replace("/{read\s+(\w*)\s*'[^']+'}/", "$1", $contenttxt);
+            $contenttxt = preg_replace("/{read\s*\w*\s*'([^']+)'}/", "$1", $contenttxt);
+            // If emphasis is provided, create and emphasis element, otherwise make a text node
+            if ($level) {
+                $emphasis = $dom->createElement('emphasis');
+                $emphasis->setAttribute('level', $level);
+                $emphasis->nodeValue = $contenttxt;
+                $elementsToReplace[] = ['newNode' => $emphasis, 'oldNode' => $element];
+            } else {
+                $txt = $dom->createTextNode($contenttxt);
+                $elementsToReplace[] = ['newNode' => $txt, 'oldNode' => $element];
+            }
         }
         // Remove noread text 
         if ($element->hasAttribute('data-noread')) {
@@ -251,7 +259,8 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
         }
         // Replace voice
         if ($element->hasAttribute('data-voice')) {
-            $gender  = $element->getAttribute('data-voice');
+            $gender = $element->nodeValue;
+            $gender = preg_replace("/{voice '(w+)'}/","$1",$gender);
             $cz_voice = ($gender == 'male' ? "cs-CZ-AntoninNeural" : "cs-CZ-VlastaNeural");
             $eng_voice = ($gender == 'male' ? "en-US-GuyNeural" : "en-US-JennyNeural");
             $voice = ($language == 'cs-CZ' ? $cz_voice : $eng_voice);
