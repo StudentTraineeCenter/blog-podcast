@@ -235,7 +235,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 })
                 .then(function(response) {
                     document.getElementById("loading").style.display = "none"; // Hide the loading element
-                    document.getElementById("file_save").style.display = "block" // Show successful file save
+                    document.getElementById("file_save").style.display = "block"; // Show successful file save
                     setTimeout(function() {
                         document.getElementById("file_save").style.display = "none";
                       }, 2000);

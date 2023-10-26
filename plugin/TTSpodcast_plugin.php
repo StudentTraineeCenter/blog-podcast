@@ -217,9 +217,15 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
         // Replace audio with SSML
         if ($element->hasAttribute('data-audio')) {
             // Either href inside <a> or just url 
-            $aTags = $element->getElementsByTagName('a');
-            if ($aTags->length == 1) {
-                $url = $aTags->getAttribute('href');
+            $ElementChild = false;
+            foreach ($element->childNodes as $child) {
+                if ($child->nodeType === XML_ELEMENT_NODE) {
+                    $ElementChild = $child;
+                    break;
+                }
+            }
+            if ($ElementChild) {
+                $url = $ElementChild->getAttribute('href');
             } else {
                 // Hande the content of audio
                 $url = $element->nodeValue;

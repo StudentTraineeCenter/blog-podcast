@@ -1,5 +1,4 @@
 make repo under STC change the address for the azure setup json
 Make documentation
 make plugin official on wordpress - Overkill, will be doing this just for STC, even though its public 
-Add something to tell that the audio is loaded to media library
-Add the option to name the file  
+dont show azure key when looking at settings
