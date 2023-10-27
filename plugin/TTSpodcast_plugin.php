@@ -69,7 +69,7 @@ function tts_settings_page() {
         <div>
             <label for="azure_key">Your azure key:</label><br>
             <div id="azure_key_flex">
-                <input type="password" id="azure_key" name="azure_key" value="<?php echo get_option('azure_key'); ?>" style="width: 200px;" oninput="autoExpand(this)"><br>
+                <input type="password" id="azure_key" name="azure_key" value="" style="width: 200px;" oninput="autoExpand(this)"><br>
                 <button type="button" id="key_visibility">Show</button>
             </div>
         </div>
