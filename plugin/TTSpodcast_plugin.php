@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: TTSarticles 
+ * Plugin Name: Text-to-speech Podcast
  * Plugin URI: https://yourwebsite.com
  * Description: Plugin that adds the ability to create a podcast out of any article.
  * Version: 2.0
@@ -63,7 +63,8 @@ function settings_init() {
 function tts_settings_page() {
     ?>
     <h1>Text to speech settings</h1>
-    <form id="tts-settings-form" method="post" action="options.php">
+    <!-- Check if any of the input fields are empty and if they are dont submit the settting -->
+    <form id="tts-settings-form" method="post" action="options.php" onsubmit="return validateForm()">
         <?php settings_fields('tts-options'); ?>
         <?php do_settings_sections('tts-options'); ?>
         <div>
@@ -95,11 +96,53 @@ function tts_settings_page() {
         </button>
     </div>
     <script>
-    document.getElementById('submitBtn').addEventListener('click', function() {
-    document.getElementById('message').textContent = 'Changes Saved';
-    setTimeout(() => {
-        document.getElementById('message').textContent = '';
-    }, 2000); // Remove message after 2 seconds
+    document.addEventListener('DOMContentLoaded', (event) => {
+        // Define the inputs to be used later
+        var azureKeyInput = document.getElementById('azure_key');
+        var azureEndpointInput = document.getElementById('azure_endpoint');
+        var startingThemeUrlInput = document.getElementById('starting_theme_url');
+        var endingThemeUrlInput = document.getElementById('ending_theme_url');
+        document.getElementById('submitBtn').addEventListener('click', function() {
+            document.getElementById('message').textContent = 'Changes Saved';
+            setTimeout(() => {
+                document.getElementById('message').textContent = '';
+            }, 2000); // Remove message after 2 seconds
+        });
+        // Check if the fields are empty and if they are dont update them
+        function validateForm() {
+
+            // Check if the fields are empty and disable them if they are
+            if (azureKeyInput.value === '') {
+            azureKeyInput.disabled = true;
+            }
+            if (azureEndpointInput.value === '') {
+                azureEndpointInput.disabled = true;
+            }
+            if (startingThemeUrlInput.value === '') {
+                startingThemeUrlInput.disabled = true;
+            }
+            if (endingThemeUrlInput.value === '') {
+                endingThemeUrlInput.disabled = true;
+            }
+        }
+        // Enable the input fields again to when there is focus on them
+        function enableInputs() {
+            azureKeyInput.disabled = false;
+            azureEndpointInput.disabled = false;
+            startingThemeUrlInput.disabled = false;
+            endingThemeUrlInput.disabled = false;
+        }
+
+        azureKeyInput.addEventListener('mouseover', enableInputs);
+        azureEndpointInput.addEventListener('mouseover', enableInputs);
+        startingThemeUrlInput.addEventListener('mouseover', enableInputs);
+        endingThemeUrlInput.addEventListener('mouseover', enableInputs);
+        document.getElementById('tts-settings-form').addEventListener('submit', function(event) {
+            // Prevent form submission if it returns false
+            if (!validateForm()) {
+                event.preventDefault();
+            }
+        });
     });
     </script>
     <?php
@@ -164,6 +207,7 @@ function my_settings_popup_callback() {
                 <input type="button" value="Save audio file" id="manualSubmit">
                 <div id="loading" class="spinner" style="display:none;"></div>
                 <span id="file_save" style="display:none">File saved to media library!</span>
+                <span id="something_wrong" style="display:block"></span>
             </div>
             
         </div>
@@ -171,9 +215,8 @@ function my_settings_popup_callback() {
     <?php
 }
 
-// Setup a function that will be used to convert the special classes into their SSML counterparts 
-// Replaces the span element with a special SSML element
-function replace_tag($htmlContent, $tagToFind, $tagToReplaceWith) {
+// Replaces all the instances of the specified tag with the new tag while keeping the nodeValue
+function replace_html_tags($htmlContent, $tagToFind, $tagToReplaceWith) {
     $dom = new DOMDocument;
     @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $htmlContent, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
 
@@ -191,17 +234,17 @@ function replace_tag($htmlContent, $tagToFind, $tagToReplaceWith) {
 
     return $dom->saveHTML();
 }
-// Main function to converth the special span elements to their SSML
+// Main function to convert the special span elements to their SSML
 function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
-    $dom = new DOMDocument;
     // Replace all titles, lists and others with <p>
     // This is done so the voice reads them as a human would 
     $tags = array('h4','h3','h2','h1','li');
     foreach ($tags as $tag) {
-        $htmlContent = replace_tag($htmlContent,$tag,'p');
+        $htmlContent = replace_html_tags($htmlContent,$tag,'p');
     }
     
     // Load the HTML content into the DOMDocument object
+    $dom = new DOMDocument;
     @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $htmlContent, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
     $xpath = new DOMXPath($dom);
 
@@ -356,9 +399,10 @@ function handle_ajax_request() {
     $alttext = $_POST['alttext'];
     $volume = $_POST['volume'];
     $given_file_name = sanitize_text_field($_POST['file_name']);
-    $ending_theme = get_option('ending_theme_url');
-    $starting_theme = get_option('starting_theme_url');
-    $endpoint_cookie = get_option('azure_endpoint');
+    // Escape the raw urls 
+    $ending_theme = esc_url_raw( get_option('ending_theme_url'));
+    $starting_theme = esc_url_raw( get_option('starting_theme_url'));
+    $endpoint_cookie = esc_url_raw( get_option('azure_endpoint'));
     //Select the voice based on language and gender
     $cz_voice = ($gender == 'male' ? "cs-CZ-AntoninNeural" : "cs-CZ-VlastaNeural");
     $eng_voice = ($gender == 'male' ? "en-US-GuyNeural" : "en-US-JennyNeural");
@@ -373,6 +417,7 @@ function handle_ajax_request() {
     // Convert html from the post to readable text 
     // Get the variables from the settings page and convert to SSML
     $post = get_post($post_id);
+    $article_title = get_the_title($post_id);
     $article_html = $post->post_content;
     $starting_theme = $starting_theme ? "<audio src=\"$starting_theme\">didn't get your MP3 audio file</audio>" : "";
     $ending_theme = $ending_theme ? "<audio src=\"$ending_theme\">didn't get your MP3 audio file</audio>" : "";
@@ -383,6 +428,7 @@ function handle_ajax_request() {
     <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="$language">
         <voice name="$voice">
             $starting_theme
+            <p>$article_title</p>
             <prosody rate="$rate%" volume="$volume">
                 $text
             </prosody>
@@ -393,19 +439,21 @@ function handle_ajax_request() {
     error_log("ssml:$ssml");
     // Illuminati -Ondra
     // First get a token from the users endpoint and then use it to request the audio from the azure tts endpoint
-    $subscriptionKey = get_option('azure_key');
-    error_log($subscriptionKey);
+    $subscriptionKey = sanitize_key( get_option('azure_key'));
     if (!$subscriptionKey) {
         wp_send_json_error(['message' => 'Please enter a valid azure key']);
     }
     // Azure endpoint to get auth token
     $endpoint_token = get_option('azure_endpoint');
+    if (!$endpoint_token) {
+        wp_send_json_error(['message' => 'Please enter a valid azuer endpoint']);
+    }
     // Steal the region from the first endpoint and get make the endpoint for the voice file
     $region = explode('.',$endpoint_token)[0];
     $endpoint_cognitive = $region . '.tts.speech.microsoft.com/cognitiveservices/v1'; // Needs to be changed if the structure of the link changes
 
     // Set up cURL
-    $ch = curl_init($endpoint1);
+    $ch = curl_init($endpoint_token);
 
     // Set up the headers
     $headers1 = [

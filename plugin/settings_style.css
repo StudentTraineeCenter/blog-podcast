@@ -14,6 +14,13 @@
     line-height: 1.5;
     color: #000000;
   }
+  #something_wrong {
+    background-color: #ffffff;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #f03030;
+  }
   #error {
     background-color: #ffffff;
     font-weight: 500;
@@ -21,7 +28,7 @@
     line-height: 1.5;
     color: #f03030;
   }
-  .spinner {
+  #loading {
     border: 10px solid #ffffff;
     border-radius: 50%;
     border-top: 10px solid #2978ff;

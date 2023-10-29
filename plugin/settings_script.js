@@ -115,7 +115,7 @@ function checkAndRemoveClasses(props) {
         }
     });
     // voice
-    voicehSpans.forEach((span) => {
+    voiceSpans.forEach((span) => {
         let isValid = /\{voice\s+'[^']+'\}/.test(span.textContent);
         if (!isValid) {
             span.outerHTML = span.textContent;
@@ -211,7 +211,6 @@ document.addEventListener("DOMContentLoaded", function() {
             // Check for invalid filenames
             const reservedCharacters = /[\/\\:\*\?"<>\|]/;
             if (reservedCharacters.test(file_name)) {
-                console.log("check_triggered");
                 e.preventDefault();
                 document.getElementById("error").innerText = 'Invalid filename!';
                 setTimeout(function() {
@@ -243,14 +242,22 @@ document.addEventListener("DOMContentLoaded", function() {
                 })
                 .then(function(response) {
                     document.getElementById("loading").style.display = "none"; // Hide the loading element
-                    document.getElementById("file_save").style.display = "block"; // Show successful file save
-                    setTimeout(function() {
-                        document.getElementById("file_save").style.display = "none";
-                      }, 2000);
                     return response.json();
                 })
                 .then(function(data) {
                     console.log(data);
+                    if (data.success) {
+                        document.getElementById("file_save").style.display = "block"; // Show successful file save
+                        setTimeout(function() {
+                            document.getElementById("file_save").style.display = "none";
+                          }, 2000);
+                    } else {
+                        var error_message = data.data.message;
+                        document.getElementById("something_wrong").innerText = error_message;
+                        setTimeout(function() {
+                            document.getElementById("something_wrong").innerText = "";
+                        }, 3000);
+                    }
                 })
                 .catch(function(error) {
                     document.getElementById("loading").style.display = "none"; // Stop the loading if there is an error
