@@ -1,4 +1,3 @@
-make repo under STC change the address for the azure setup json
+change the address for the azure setup json
 Make documentation
 make plugin official on wordpress - Overkill, will be doing this just for STC, even though its public 
-dont show azure key when looking at settings
