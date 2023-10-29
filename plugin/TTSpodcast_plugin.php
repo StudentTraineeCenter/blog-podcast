@@ -2,10 +2,10 @@
 /**
  * Plugin Name: TTSarticles 
  * Plugin URI: https://yourwebsite.com
- * Description: This plugin creates a button for all admins on a wordpress webste that allows them to make a podcast out of their article.
+ * Description: Plugin that adds the ability to create a podcast out of any article.
  * Version: 2.0
  * Author: FilBlack
- * Author URI: https://yourwebsite.com
+ * Author URI: https://github.com/FilBlack
  */
 
 // Enqueue necessary files for admin
@@ -43,13 +43,13 @@ function destroy_special_tag($content) {
     }
     return $content;
 }
-// Add a settings page
+// The folowing few functions are used to add the settings page for the whole plugin 
 add_action('admin_menu','tts_settings');
 
 function tts_settings(){
     add_menu_page('TTS-Podcast_settings', 'TTS-Podcast', 'manage_options', 'my_plugin_slug', 'tts_settings_page', 'dashicons-controls-volumeon', 99);
 }
-// Register the setting
+// Register the settings
 add_action('admin_init', 'settings_init');
 
 function settings_init() {
@@ -59,7 +59,7 @@ function settings_init() {
     register_setting('tts-options', 'azure_endpoint');
 }
 
-// Be able to set default theme, set the azure key 
+// Be able to set default theme, set the azure key and endpoint 
 function tts_settings_page() {
     ?>
     <h1>Text to speech settings</h1>
@@ -99,18 +99,19 @@ function tts_settings_page() {
     document.getElementById('message').textContent = 'Changes Saved';
     setTimeout(() => {
         document.getElementById('message').textContent = '';
-    }, 2000); // Remove message after 1 second
+    }, 2000); // Remove message after 2 seconds
     });
     </script>
     <?php
 }
-// Add meta box, only if in the admin area
+// Add the options box for the voice file 
+// Triggers only if in the admin area
 function add_my_custom_meta_box() {
     add_meta_box('text_to_speech', 'Text to speech', 'my_settings_popup_callback', 'post','side', 'default');
 }
 add_action('add_meta_boxes', 'add_my_custom_meta_box');
 
-// add page content
+// The voice file options html 
 function my_settings_popup_callback() {
     ?>
     <div class="wrap">
@@ -169,6 +170,9 @@ function my_settings_popup_callback() {
     </div>
     <?php
 }
+
+// Setup a function that will be used to convert the special classes into their SSML counterparts 
+// Replaces the span element with a special SSML element
 function replace_tag($htmlContent, $tagToFind, $tagToReplaceWith) {
     $dom = new DOMDocument;
     @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $htmlContent, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
@@ -187,10 +191,11 @@ function replace_tag($htmlContent, $tagToFind, $tagToReplaceWith) {
 
     return $dom->saveHTML();
 }
-// Process the span element to be SSML
+// Main function to converth the special span elements to their SSML
 function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
     $dom = new DOMDocument;
     // Replace all titles, lists and others with <p>
+    // This is done so the voice reads them as a human would 
     $tags = array('h4','h3','h2','h1','li');
     foreach ($tags as $tag) {
         $htmlContent = replace_tag($htmlContent,$tag,'p');
@@ -233,6 +238,7 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
                 $url = str_replace("'","",$url);
                 $url = substr($url, 0, -1);
             }
+            // Add a message so the user knows that the audio wasnt found
             $audio = $dom->createTextNode("</p></prosody><audio src=\"$url\">didn't get your mp3 audio file</audio><prosody rate=\"$rate%\" volume=\"$volume\"><p>");
             $elementsToReplace[] = ['newNode' => $audio, 'oldNode' => $element];
         }
@@ -247,7 +253,7 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
             $elementsToReplace[] = ['newNode' => $emphasis, 'oldNode' => $element->nextSibling];
             $elementsToRemove[] = $element;
         }
-        // Replace text to be read with ssml text 
+        // Replace text to be read with SSML 
         if ($element->hasAttribute('data-text')) {
             $contenttxt = $element->nodeValue;
             $level = preg_replace("/{read\s+(\w*)\s*'[^']+'}/", "$1", $contenttxt);
@@ -269,7 +275,8 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
             $elementsToRemove[] = $element;
             $elementsToRemove[] = $sibling;
         }
-        // Replace voice
+        // Replace voice with SSML
+        // Need to end paragraph then prosody, switch the voice and intiate prosody and paragraph again
         if ($element->hasAttribute('data-voice')) {
             $gender = $element->nodeValue;
             $gender = preg_replace("/{voice '(w+)'}/","$1",$gender);
@@ -279,7 +286,7 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
             $velement = $dom->createTextNode("</p></prosody></voice><voice name=\"$voice\"><prosody rate=\"$rate%\" volume=\"$volume\"><p>");
             $elementsToReplace[] = ['newNode' => $velement, 'oldNode' => $element];
         }
-        // Remove the ending quotes 
+        // Remove the ending quotes for all the elements if not deleted already (emp, noread)
         if ($element->hasAttribute('data-quote')) {
             $elementsToRemove[] = $element;
         }
@@ -338,7 +345,10 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
     return $textContent;
 }
 
+// This is the function that processes the text and sends the appropriate http request to bothe needed azure ednpoint 
 function handle_ajax_request() {
+    // Get all the needed variable to process the request 
+    // Only need to sanitize the file_name, the rest are just sliders and options
     $language = $_POST['language'];
     $speed = $_POST['speed'];
     $post_id = $_POST['post_id'];
@@ -360,13 +370,15 @@ function handle_ajax_request() {
     } else {
         $rate ="$rate";
     }
-    // Get the html from the post and convert it to readable text  
+    // Convert html from the post to readable text 
+    // Get the variables from the settings page and convert to SSML
     $post = get_post($post_id);
     $article_html = $post->post_content;
     $starting_theme = $starting_theme ? "<audio src=\"$starting_theme\">didn't get your MP3 audio file</audio>" : "";
     $ending_theme = $ending_theme ? "<audio src=\"$ending_theme\">didn't get your MP3 audio file</audio>" : "";
+    // Convert to SSML text 
     $text = convert_htmltotext($article_html,$alttext,$rate,$volume,$language);
-    // SSML
+    // SSML with the themes and all the selected options 
     $ssml = <<<EOD
     <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="$language">
         <voice name="$voice">
@@ -386,11 +398,11 @@ function handle_ajax_request() {
     if (!$subscriptionKey) {
         wp_send_json_error(['message' => 'Please enter a valid azure key']);
     }
-    // Azure endpoint
-    $endpoint1 = get_option('azure_endpoint');
-    // Steal the region from the first endpoint
-    $region = explode('.',$endpoint1)[0];
-    $endpoint_cognitive = $region . '.tts.speech.microsoft.com/cognitiveservices/v1';
+    // Azure endpoint to get auth token
+    $endpoint_token = get_option('azure_endpoint');
+    // Steal the region from the first endpoint and get make the endpoint for the voice file
+    $region = explode('.',$endpoint_token)[0];
+    $endpoint_cognitive = $region . '.tts.speech.microsoft.com/cognitiveservices/v1'; // Needs to be changed if the structure of the link changes
 
     // Set up cURL
     $ch = curl_init($endpoint1);
@@ -414,7 +426,6 @@ function handle_ajax_request() {
         $token = $result;
     }
     $contentLength = strlen($ssml);
-
     $headers2 = [
         'Authorization: Bearer ' . $token,
         'Content-Type: application/ssml+xml',
@@ -436,6 +447,7 @@ function handle_ajax_request() {
         // Get WordPress upload directory info
         $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         error_log($httpcode);
+        // Name the file according to the user, otherwise use the name of the post 
         if ($given_file_name) {
             $title = $given_file_name;
         } else {
@@ -476,4 +488,5 @@ function handle_ajax_request() {
     // Close cURL
     curl_close($ch);
 }
+// Add the function to handle the ajax request
 add_action('wp_ajax_my_ajax_action', 'handle_ajax_request');

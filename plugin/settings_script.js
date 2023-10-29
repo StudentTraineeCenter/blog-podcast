@@ -1,3 +1,4 @@
+// Used in the settings page for the whole plugin
 // Function to expand the input box with text inside it 
 function autoExpand(input) {  
     input.style.width = 'auto';
@@ -5,7 +6,7 @@ function autoExpand(input) {
     stretchedWidth += 10;
     input.style.width = stretchedWidth + 'px';
 }
-// Show hidden password
+// Toggle hidden password
 function togglePasswordVisibility() {
     var inputElement = document.getElementById("azure_key");
     if (inputElement.type === "password") {
@@ -18,38 +19,40 @@ var key_show_button = document.getElementById("key_visibility");
 if (key_show_button) {
     key_show_button.addEventListener("click",togglePasswordVisibility);
 }
-// Check the url to see if editing a post or not
+// Check the url to see if editing a post or not, if its a post then run the rest of the javascript
 if (window.location.href.indexOf('/post.php')=== -1) {
     const specialTags1 = document.querySelectorAll('.tts-tag');
     specialTags1.forEach(function(tag) {
         tag.style.display = 'none';
     });
 } else { 
-// Dual mode for special tags
+// Setup to edit the blockEdit function
 const { addFilter } = wp.hooks;
 const { createHigherOrderComponent } = wp.compose;
 
-// Remove the class when needed
+// Remove the class when a part of the needed regex is missing 
+// This is to prevent nested classes and generally adds robustness
 function checkAndRemoveClasses(props) {
     let content = props.attributes.content;
     let parser = new DOMParser();
     let doc = parser.parseFromString(content, 'text/html');
     // emp
-    const firstSpans = Array.from(doc.querySelectorAll('[data-level]'));
-    const secondSpans = Array.from(doc.querySelectorAll('[data-quote]'));
+    const empSpans = Array.from(doc.querySelectorAll('[data-level]'));
+    // '
+    const quoteSpans = Array.from(doc.querySelectorAll('[data-quote]'));
     // break
-    const thirdSpans = Array.from(doc.querySelectorAll('[data-time]'));
+    const breakSpans = Array.from(doc.querySelectorAll('[data-time]'));
     // read
-    const fourthSpans = Array.from(doc.querySelectorAll('[data-text]'));
+    const readSpans = Array.from(doc.querySelectorAll('[data-text]'));
     // audio
-    const fifthSpans = Array.from(doc.querySelectorAll('[data-audio]'));
+    const audioSpans = Array.from(doc.querySelectorAll('[data-audio]'));
     // noread
-    const sixthSpans = Array.from(doc.querySelectorAll('[data-noread]'));
+    const noreadSpans = Array.from(doc.querySelectorAll('[data-noread]'));
     // voice
-    const seventhSpans = Array.from(doc.querySelectorAll('[data-voice]'));
+    const voiceSpans = Array.from(doc.querySelectorAll('[data-voice]'));
     let changed = false;
     // emp
-    firstSpans.forEach((span) => {
+    empSpans.forEach((span) => {
         let isValid = /\{emp\s+\w+\s+'/.test(span.textContent);
         if (!isValid) {
             let nextSibling = span.nextElementSibling;
@@ -61,8 +64,8 @@ function checkAndRemoveClasses(props) {
             changed = true;
         }
     });
-    // '/
-    secondSpans.forEach((span) => {
+    // '
+    quoteSpans.forEach((span) => {
         let isValid = /'\}/.test(span.textContent);
         if (!isValid) {
             let previousSibling = span.previousElementSibling;
@@ -75,7 +78,7 @@ function checkAndRemoveClasses(props) {
         }
     });
     // break
-    thirdSpans.forEach((span) => {
+    breakSpans.forEach((span) => {
         let isValid = /\{break\s+\d+ms\}/.test(span.textContent);
         if (!isValid) {
             span.outerHTML = span.textContent;
@@ -83,21 +86,23 @@ function checkAndRemoveClasses(props) {
         }
     });
     // read
-    fourthSpans.forEach((span) => {
+    readSpans.forEach((span) => {
         let isValid = /\{read\s+[^']*\s*'[^']+'\}/.test(span.textContent);
         if (!isValid) {
             span.outerHTML = span.textContent;
             changed = true;
         }
     });
-    fifthSpans.forEach((span) => {
+    // audio
+    audioSpans.forEach((span) => {
         let isValid = /\{audio\s+'[^']+'\}/.test(span.textContent);
         if (!isValid) {
             span.outerHTML = span.textContent;
             changed = true;
         }
     });
-    sixthSpans.forEach((span) => {
+    // noread
+    noreadSpans.forEach((span) => {
         let isValid = /\{noread\s+'/.test(span.textContent);
         if (!isValid) {
             let nextSibling = span.nextElementSibling;
@@ -109,7 +114,8 @@ function checkAndRemoveClasses(props) {
             changed = true;
         }
     });
-    seventhSpans.forEach((span) => {
+    // voice
+    voicehSpans.forEach((span) => {
         let isValid = /\{voice\s+'[^']+'\}/.test(span.textContent);
         if (!isValid) {
             span.outerHTML = span.textContent;
@@ -121,6 +127,7 @@ function checkAndRemoveClasses(props) {
         props.setAttributes({ content: doc.body.innerHTML });
     }
 }
+// Function that adds the class when the proper regex is registered, together with the class removal
 // Debounce to improve the performance
 let debouncedFunction = _.debounce(function(props) {
     if (props.attributes && props.attributes.content) {
@@ -135,7 +142,7 @@ let debouncedFunction = _.debounce(function(props) {
         });        
         // Wrap audio -one <span>
         newContent = newContent.replace(/(?!<span class="tts-tag" data-audio="true">)\{audio\s+'([^']+)'\}(?!<\/span>)/g, '<span class="tts-tag" data-audio="true">{audio \'$1\'}</span>');
-        // Wrap text no to be read but visible -one <span>
+        // Wrap text not to be read but be visible -one <span>
         newContent = newContent.replace(/(?!<span class="tts-tag" data-noread="true">)\{noread\s+'([^']+)'\}(?!<\/span>)/g, '<span class="tts-tag" data-noread="true">{noread \'</span>$1<span class="tts-tag" data-quote="true">\'}</span>');
         // Wrap voice -one <span>
         newContent = newContent.replace(/(?!<span class="tts-tag" data-voice="true">)\{voice\s+'([^']+)'\}(?!<\/span>)/g, '<span class="tts-tag" data-voice="true">{voice \'$1\'}</span>');
@@ -147,6 +154,7 @@ let debouncedFunction = _.debounce(function(props) {
     checkAndRemoveClasses(props)
 }, 300); 
 
+// edit the BlockEdit 
 const addSpecialClass = createHigherOrderComponent((BlockEdit) => {
     return (props) => {
         // Check if the block has a 'content' attribute
@@ -158,7 +166,7 @@ const addSpecialClass = createHigherOrderComponent((BlockEdit) => {
 
 addFilter('editor.BlockEdit', 'tts/add-special-class', addSpecialClass);
 
-// Text to speech menu
+// Text to speech menu to customize the voice file 
 document.addEventListener("DOMContentLoaded", function() {
     var popup = document.getElementById("settingsPopup");
     var tagToggle = document.getElementById("TagToggle");
@@ -188,6 +196,7 @@ document.addEventListener("DOMContentLoaded", function() {
     } else {
         console.error("Buttons or popup not found");
     }
+    // Send the gathered options and the text of the post to the php using ajax 
     var manualSubmitButton = document.getElementById("manualSubmit");
     if (manualSubmitButton) {
         manualSubmitButton.addEventListener("click", function(e) {
@@ -200,7 +209,6 @@ document.addEventListener("DOMContentLoaded", function() {
             var volume =  settingsContainer.querySelector("select[name='volume']").value;
             var file_name = settingsContainer.querySelector("input[name=name_box]").value;
             // Check for invalid filenames
-            console.log(file_name);
             const reservedCharacters = /[\/\\:\*\?"<>\|]/;
             if (reservedCharacters.test(file_name)) {
                 console.log("check_triggered");
@@ -228,7 +236,7 @@ document.addEventListener("DOMContentLoaded", function() {
             if (formData) {
                 formData.append('action', 'my_ajax_action');  // Append action
                 formData.append('post_id', postId);  // Append post ID
-                console.log("Recieved parameters")
+                // Use the ajax to ping the php 
                 fetch(ajaxurl, {
                     method: 'POST',
                     body: formData,
@@ -245,7 +253,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     console.log(data);
                 })
                 .catch(function(error) {
-                    document.getElementById("loading").style.display = "none";
+                    document.getElementById("loading").style.display = "none"; // Stop the loading if there is an error
                     console.error("Error:", error);
                 });
             } else {

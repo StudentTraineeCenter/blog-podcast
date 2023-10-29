@@ -46,7 +46,7 @@
   }
   #tts-settings-form label {
     margin-bottom: 4px;
-    color: #2978ff;
+    color: rgb(18, 102, 241); /* Cool color for azure and STC */
     font-size: 20px;
     max-width: 300px;
   }
