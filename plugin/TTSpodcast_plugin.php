@@ -58,13 +58,45 @@ function settings_init() {
     register_setting('tts-options', 'ending_theme_url');
     register_setting('tts-options', 'azure_endpoint');
 }
+// Function to procces submitting the form 
+// Removes the empty fields from submission
+function process_tts_form() {
+    error_log("process form triggered");
+    if (isset($_POST['action']) && $_POST['action'] == 'non_empty_submit') {
+        if (!empty($_POST['azure_key'])) {
+            update_option('azure_key', sanitize_text_field($_POST['azure_key']));
+            error_log("azure key triggered");
+        }
+
+        if (!empty($_POST['azure_endpoint'])) {
+            update_option('azure_endpoint', sanitize_text_field($_POST['azure_endpoint']));
+            error_log("azure_endpoint triggered");
+        }
+
+        if (!empty($_POST['starting_theme_url'])) {
+            update_option('starting_theme_url', esc_url_raw($_POST['starting_theme_url']));
+        }
+
+        if (!empty($_POST['ending_theme_url'])) {
+            update_option('ending_theme_url', esc_url_raw($_POST['ending_theme_url']));
+        }
+        wp_redirect(add_query_arg(
+            array('updated' => 'true'),
+            wp_get_referer()
+        ));
+        exit;
+    }
+}
+
+add_action('admin_post_non_empty_submit', 'process_tts_form');
+add_action('admin_post_nopriv_non_empty_submit', 'process_tts_form');
 
 // Be able to set default theme, set the azure key and endpoint 
 function tts_settings_page() {
     ?>
     <h1>Text to speech settings</h1>
     <!-- Check if any of the input fields are empty and if they are dont submit the settting -->
-    <form id="tts-settings-form" method="post" action="options.php" onsubmit="return validateForm()">
+    <form id="tts-settings-form" method="post" action="<?php echo admin_url('admin-post.php'); ?>">
         <?php settings_fields('tts-options'); ?>
         <?php do_settings_sections('tts-options'); ?>
         <div>
@@ -86,6 +118,7 @@ function tts_settings_page() {
             <label for="ending_theme_url">Ending theme url:</label><br>
             <input type="text" id="ending_theme_url" name="ending_theme_url" value="<?php echo get_option('ending_theme_url'); ?>"style="width: 200px;" oninput="autoExpand(this)">
         </div>
+        <input type="hidden" name="action" value="non_empty_submit">
         <?php submit_button('Save Changes', 'primary', 'submit', true, array('id' => 'submitBtn')); ?>
     <span id="message"></span>
     </form>
@@ -97,51 +130,11 @@ function tts_settings_page() {
     </div>
     <script>
     document.addEventListener('DOMContentLoaded', (event) => {
-        // Define the inputs to be used later
-        var azureKeyInput = document.getElementById('azure_key');
-        var azureEndpointInput = document.getElementById('azure_endpoint');
-        var startingThemeUrlInput = document.getElementById('starting_theme_url');
-        var endingThemeUrlInput = document.getElementById('ending_theme_url');
         document.getElementById('submitBtn').addEventListener('click', function() {
             document.getElementById('message').textContent = 'Changes Saved';
             setTimeout(() => {
                 document.getElementById('message').textContent = '';
             }, 2000); // Remove message after 2 seconds
-        });
-        // Check if the fields are empty and if they are dont update them
-        function validateForm() {
-
-            // Check if the fields are empty and disable them if they are
-            if (azureKeyInput.value === '') {
-            azureKeyInput.disabled = true;
-            }
-            if (azureEndpointInput.value === '') {
-                azureEndpointInput.disabled = true;
-            }
-            if (startingThemeUrlInput.value === '') {
-                startingThemeUrlInput.disabled = true;
-            }
-            if (endingThemeUrlInput.value === '') {
-                endingThemeUrlInput.disabled = true;
-            }
-        }
-        // Enable the input fields again to when there is focus on them
-        function enableInputs() {
-            azureKeyInput.disabled = false;
-            azureEndpointInput.disabled = false;
-            startingThemeUrlInput.disabled = false;
-            endingThemeUrlInput.disabled = false;
-        }
-
-        azureKeyInput.addEventListener('mouseover', enableInputs);
-        azureEndpointInput.addEventListener('mouseover', enableInputs);
-        startingThemeUrlInput.addEventListener('mouseover', enableInputs);
-        endingThemeUrlInput.addEventListener('mouseover', enableInputs);
-        document.getElementById('tts-settings-form').addEventListener('submit', function(event) {
-            // Prevent form submission if it returns false
-            if (!validateForm()) {
-                event.preventDefault();
-            }
         });
     });
     </script>
