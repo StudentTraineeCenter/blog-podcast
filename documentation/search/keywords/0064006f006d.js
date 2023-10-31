@@ -1,0 +1,1 @@
+﻿NDSearch.OnPrefixDataLoaded("dom",["Event"],[["DOMContentLoaded",,[[,,,,0,"File:docsettings_script.js:DOMContentLoaded"]]]]);

@@ -138,3 +138,7 @@ __azurite_db*__.json
 
 # Random text files 
 required_features.txt
+
+# Docs for creating documentation
+doccode/
+ND Config/

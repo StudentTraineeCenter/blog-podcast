@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: Text-to-speech Podcast
- * Plugin URI: https://yourwebsite.com
+ * Plugin URI: https://github.com/StudentTraineeCenter/blog-podcast
  * Description: Plugin that adds the ability to create a podcast out of any article.
- * Version: 2.0
+ * Version: 1.0
  * Author: FilBlack
  * Author URI: https://github.com/FilBlack
  */
@@ -12,7 +12,7 @@
 function enqueue_admin_scripts() {
     wp_enqueue_style('my-plugin-style', plugin_dir_url(__FILE__) . 'settings_style.css');
     wp_enqueue_script('my-plugin-script', plugin_dir_url(__FILE__) . 'settings_script.js', array('jquery'), '1.0', true);
-    // Enqueue Iodash for debouncing
+    // Enqueue Iodash for debouncing un javascript
     wp_enqueue_script('lodash');
 }
 add_action('admin_enqueue_scripts', 'enqueue_admin_scripts');
@@ -43,7 +43,7 @@ function destroy_special_tag($content) {
     }
     return $content;
 }
-// The folowing few functions are used to add the settings page for the whole plugin 
+// The folowing few functions are used to add the settings page 
 add_action('admin_menu','tts_settings');
 
 function tts_settings(){
@@ -124,7 +124,7 @@ function tts_settings_page() {
     </form>
     <div id="azure_deployment">
         <label for="deploy_button">Deploy your resource to azure and copy the key with the endpoint:</label>
-        <button id ="deploy_button" onclick="window.open('https://portal.azure.com/#create/Microsoft.Template/uri/https://raw.githubusercontent.com/FilBlack/STC_blog_podcast/master/azure_deploy.json')" target="_blank">
+        <button id ="deploy_button" onclick="window.open('https://portal.azure.com/#create/Microsoft.Template/uri/https://raw.githubusercontent.com/StudentTraineeCenter/blog-podcast/master/azure_deploy.json')" target="_blank">
             <img id="deploy_button_image" src="https://aka.ms/deploytoazurebutton" alt="Deploy to Azure">
         </button>
     </div>
@@ -140,7 +140,7 @@ function tts_settings_page() {
     </script>
     <?php
 }
-// Add the options box for the voice file 
+// The next few functions are used to add the metabox or the options box when editing the post
 // Triggers only if in the admin area
 function add_my_custom_meta_box() {
     add_meta_box('text_to_speech', 'Text to speech', 'my_settings_popup_callback', 'post','side', 'default');
@@ -207,7 +207,7 @@ function my_settings_popup_callback() {
     </div>
     <?php
 }
-
+// Setup for the convert_to_html 
 // Replaces all the instances of the specified tag with the new tag while keeping the nodeValue
 function replace_html_tags($htmlContent, $tagToFind, $tagToReplaceWith) {
     $dom = new DOMDocument;
@@ -227,7 +227,7 @@ function replace_html_tags($htmlContent, $tagToFind, $tagToReplaceWith) {
 
     return $dom->saveHTML();
 }
-// Main function to convert the special span elements to their SSML
+// Main function to convert the special span elements to their SSML 
 function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
     // Replace all titles, lists and others with <p>
     // This is done so the voice reads them as a human would 
@@ -382,6 +382,7 @@ function convert_htmltotext($htmlContent,$alttext,$rate,$volume,$language) {
 }
 
 // This is the function that processes the text and sends the appropriate http request to bothe needed azure ednpoint 
+// It will recieve the needed variables and text from the javascript ajax call
 function handle_ajax_request() {
     // Get all the needed variable to process the request 
     // Only need to sanitize the file_name, the rest are just sliders and options
@@ -414,7 +415,7 @@ function handle_ajax_request() {
     $article_html = $post->post_content;
     $starting_theme = $starting_theme ? "<audio src=\"$starting_theme\">didn't get your MP3 audio file</audio>" : "";
     $ending_theme = $ending_theme ? "<audio src=\"$ending_theme\">didn't get your MP3 audio file</audio>" : "";
-    // Convert to SSML text 
+    // Convert the text to SSML  
     $text = convert_htmltotext($article_html,$alttext,$rate,$volume,$language);
     // SSML with the themes and all the selected options 
     $ssml = <<<EOD
@@ -457,7 +458,7 @@ function handle_ajax_request() {
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers1);
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    // Execute the request and get the audio data
+    // Execute the request and get the authorization token
     $result = curl_exec($ch);
     // Check for errors
     if (curl_errno($ch)) {
@@ -467,6 +468,7 @@ function handle_ajax_request() {
         $token = $result;
     }
     $contentLength = strlen($ssml);
+    // Setup second headers
     $headers2 = [
         'Authorization: Bearer ' . $token,
         'Content-Type: application/ssml+xml',

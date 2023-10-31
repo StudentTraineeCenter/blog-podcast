@@ -1,0 +1,1 @@
+﻿NDSearch.OnPrefixDataLoaded("che",["Function"],[["checkAndRemoveClasses",,[[,,,,0,"File:docsettings_script.js:checkAndRemoveClasses"]]]]);

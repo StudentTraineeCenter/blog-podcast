@@ -1,4 +1,4 @@
-// Used in the settings page for the whole plugin
+// autoExpand and togglePasswordVisibility are used in the settings page for the whole plugin
 // Function to expand the input box with text inside it 
 function autoExpand(input) {  
     input.style.width = 'auto';

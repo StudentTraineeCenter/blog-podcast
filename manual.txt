@@ -1,8 +1,3 @@
-# STC-blog-podcast
-A tool that adds the ability to create a podcast out of any post on a wordpress website.
-This plugin is not yet official on wordpress.
-
-# Manual 
 Installation:
     Download the zip file with the plugin - plugin.zip
     Under plugins in wordpress choose Add-New->Upload-plugin and upload plugin.zip
@@ -61,8 +56,3 @@ Disclaimers:
  There is a slight delay between the file being uploaded to the medial library and it showing when adding media from the post.
     This problem is inherent to wordpress, you can still upload it from the media library immediately.
  The AI will read literally anything, beware of cursewords. 
-
-# Functionality 
-The plugin transforms the content of the post along with any special tags into AI-readable SSML;
-It then uses Azure speech services REST API to create an mp3 file out of the SSML; 
-The voice file is then uploaded to the media libary. 

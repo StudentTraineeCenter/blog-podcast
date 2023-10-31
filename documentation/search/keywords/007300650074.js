@@ -1,0 +1,1 @@
+﻿NDSearch.OnPrefixDataLoaded("set",["Function"],[["settings_init",,[[,,,,0,"File:docTTSpodcast_plugin.php:settings_init"]]]]);
