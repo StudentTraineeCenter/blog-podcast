@@ -61,16 +61,13 @@ function settings_init() {
 // Function to procces submitting the form 
 // Removes the empty fields from submission
 function process_tts_form() {
-    error_log("process form triggered");
     if (isset($_POST['action']) && $_POST['action'] == 'non_empty_submit') {
         if (!empty($_POST['azure_key'])) {
             update_option('azure_key', sanitize_text_field($_POST['azure_key']));
-            error_log("azure key triggered");
         }
 
         if (!empty($_POST['azure_endpoint'])) {
             update_option('azure_endpoint', sanitize_text_field($_POST['azure_endpoint']));
-            error_log("azure_endpoint triggered");
         }
 
         if (!empty($_POST['starting_theme_url'])) {
@@ -430,7 +427,6 @@ function handle_ajax_request() {
         </voice>
     </speak>
     EOD;
-    error_log("ssml:$ssml");
     // Illuminati -Ondra
     // First get a token from the users endpoint and then use it to request the audio from the azure tts endpoint
     $subscriptionKey = sanitize_key( get_option('azure_key'));
@@ -489,7 +485,6 @@ function handle_ajax_request() {
     } else {
         // Get WordPress upload directory info
         $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        error_log($httpcode);
         // Name the file according to the user, otherwise use the name of the post 
         if ($given_file_name) {
             $title = $given_file_name;

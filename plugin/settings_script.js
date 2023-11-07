@@ -56,7 +56,6 @@ function checkAndRemoveClasses(props) {
         let isValid = /\{emp\s+\w+\s+'/.test(span.textContent);
         if (!isValid) {
             let nextSibling = span.nextElementSibling;
-            console.log(nextSibling)
             if (nextSibling && nextSibling.getAttribute('data-quote')) {
                 nextSibling.outerHTML = nextSibling.textContent;
             }
@@ -69,7 +68,6 @@ function checkAndRemoveClasses(props) {
         let isValid = /'\}/.test(span.textContent);
         if (!isValid) {
             let previousSibling = span.previousElementSibling;
-            console.log(previousSibling);
             if (previousSibling && (previousSibling.hasAttribute('data-level') || previousSibling.hasAttribute('data-noread'))) {
                 previousSibling.outerHTML = previousSibling.textContent;
             }
@@ -106,7 +104,6 @@ function checkAndRemoveClasses(props) {
         let isValid = /\{noread\s+'/.test(span.textContent);
         if (!isValid) {
             let nextSibling = span.nextElementSibling;
-            console.log(nextSibling)
             if (nextSibling && nextSibling.getAttribute('data-quote')) {
                 nextSibling.outerHTML = nextSibling.textContent;
             }
@@ -146,9 +143,6 @@ let debouncedFunction = _.debounce(function(props) {
         newContent = newContent.replace(/(?!<span class="tts-tag" data-noread="true">)\{noread\s+'([^']+)'\}(?!<\/span>)/g, '<span class="tts-tag" data-noread="true">{noread \'</span>$1<span class="tts-tag" data-quote="true">\'}</span>');
         // Wrap voice -one <span>
         newContent = newContent.replace(/(?!<span class="tts-tag" data-voice="true">)\{voice\s+'([^']+)'\}(?!<\/span>)/g, '<span class="tts-tag" data-voice="true">{voice \'$1\'}</span>');
-        if (props.attributes.content != newContent) {
-            console.log(newContent);
-        }
         props.setAttributes({ content: newContent });
     }
     checkAndRemoveClasses(props)
@@ -170,7 +164,6 @@ addFilter('editor.BlockEdit', 'tts/add-special-class', addSpecialClass);
 document.addEventListener("DOMContentLoaded", function() {
     var popup = document.getElementById("settingsPopup");
     var tagToggle = document.getElementById("TagToggle");
-    console.log("DOMContentLoaded event fired")
     // Check if buttons and popup exist in the DOM
     if(popup && tagToggle) {
         let active = true;
@@ -245,7 +238,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     return response.json();
                 })
                 .then(function(data) {
-                    console.log(data);
                     if (data.success) {
                         document.getElementById("file_save").style.display = "block"; // Show successful file save
                         setTimeout(function() {
