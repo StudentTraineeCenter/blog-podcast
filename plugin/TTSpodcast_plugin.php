@@ -65,18 +65,9 @@ function process_tts_form() {
         if (!empty($_POST['azure_key'])) {
             update_option('azure_key', sanitize_text_field($_POST['azure_key']));
         }
-
-        if (!empty($_POST['azure_endpoint'])) {
-            update_option('azure_endpoint', sanitize_text_field($_POST['azure_endpoint']));
-        }
-
-        if (!empty($_POST['starting_theme_url'])) {
-            update_option('starting_theme_url', esc_url_raw($_POST['starting_theme_url']));
-        }
-
-        if (!empty($_POST['ending_theme_url'])) {
-            update_option('ending_theme_url', esc_url_raw($_POST['ending_theme_url']));
-        }
+        update_option('azure_endpoint', sanitize_text_field($_POST['azure_endpoint']));
+        update_option('starting_theme_url', esc_url_raw($_POST['starting_theme_url']));
+        update_option('ending_theme_url', esc_url_raw($_POST['ending_theme_url']));
         wp_redirect(add_query_arg(
             array('updated' => 'true'),
             wp_get_referer()
