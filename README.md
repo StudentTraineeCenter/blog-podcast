@@ -69,3 +69,7 @@ After you are happy with the podcast, you can add it to the post or do anything 
 The plugin transforms the content of the post along with any special tags into AI-readable SSML.  
 It then uses Azure Speech Services REST API to create an mp3 file out of the SSML.  
 The voice file is then uploaded to the media library.
+
+## Disclaimer
+
+**Authorship of Audio Files:** Please note that this software generates audio files based on user input. As the developer of this software, I do not claim any authorship, ownership, or responsibility for the content or copyright status of the audio files created using this code. Users are solely responsible for the content they create and any legal implications arising from their creation and use.
