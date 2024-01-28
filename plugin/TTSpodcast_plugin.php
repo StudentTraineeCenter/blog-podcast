@@ -502,6 +502,8 @@ function handle_ajax_request() {
         // Insert the attachment.
         $attach_id = wp_insert_attachment($attachment, $file_path, $post_id);
 
+        // Change the url for the playbutton 
+
         // Make sure to include the WordPress image.php file
         require_once(ABSPATH . 'wp-admin/includes/image.php');
 
@@ -511,7 +513,7 @@ function handle_ajax_request() {
         // Update metadata
         wp_update_attachment_metadata($attach_id, $attach_data);
         
-        wp_send_json_success(['message' => 'Podcast appended.']);
+        wp_send_json_success(['message' => 'Podcast appended.', 'url' => $file_path]);
     }
 
     // Close cURL

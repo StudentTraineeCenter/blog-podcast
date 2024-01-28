@@ -194,6 +194,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (manualSubmitButton) {
         manualSubmitButton.addEventListener("click", function(e) {
             document.getElementById("loading").style.display = "block"; // Show that its loading
+            var play_button = document.getElementById("play_button");
             var settingsContainer = document.getElementById("settingsContainer");
             var language = settingsContainer.querySelector("input[name='language']:checked").value;
             var gender = settingsContainer.querySelector("input[name='gender']:checked").value;
@@ -240,6 +241,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 .then(function(data) {
                     if (data.success) {
                         document.getElementById("file_save").style.display = "block"; // Show successful file save
+                        play_button.setAttribute("src", data.url);
                         setTimeout(function() {
                             document.getElementById("file_save").style.display = "none";
                           }, 2000);
